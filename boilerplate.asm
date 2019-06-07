@@ -139,6 +139,15 @@ PALETTES:
 	.db $0F,$20,$10,$00	; SPR palette 2
 	.db $0F,$20,$10,$00	; SPR palette 3
 
+TITLETEXT:
+	.db "BOILERPLATE", $00
+
+STARTTEXT:
+	.db "PRESS START", $00
+
+PAUSETEXT:
+	.db "PAUSE", $00
+
 	.org $FF00
 
 RESET:
