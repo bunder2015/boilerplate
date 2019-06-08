@@ -20,7 +20,7 @@
 
 ;;;;;;;;;;
 
-	; NES registers
+	; NES CPU register variables
 	.include "registers.asm"
 
 ;;;;;;;;;;
@@ -52,7 +52,7 @@ DBGSP:
 	; Work memory $0200-07FF
 	.bss
 
-	; Allocate 256b chunk of WRAM for PPU OAM
+	; Reserve 256b chunk of WRAM for PPU OAM
 	.include "ppu-bss.asm"
 
 ;;;;;;;;;;
@@ -81,48 +81,32 @@ LOADPALS:
 	LDA #$00
 	STA PPUADDR		; Set PPUADDR to $3F00
 
-	LDX #$00
-
-.PALSLOOP:
+	LDX #$00		; Set loop counter
+.L1:
 	LDA PALETTES, X		; Read palette colour
 	STA PPUDATA		; Store to PPU
 	INX
 	CPX #$20
-	BNE .PALSLOOP		; Loop through 4 BG and SPR palettes
+	BNE .L1			; Loop through 4 BG and SPR palettes
 
 	RTS
 
-READJOY1:
+READJOYS:
 	LDA #$01
 	STA STROBE		; Bring strobe latch high
 	LDA #$00
 	STA STROBE		; Bring strobe latch low
 
-	LDX #$08
-
-.JOY1LOOP:
+	LDX #$08		; Set loop counter
+.L1:
 	LDA JOY1		; Read Joypad 1
 	LSR A			; Shift bit into carry
 	ROL <JOY1IN		; Rotate carry into storage
-	DEX
-	BNE .JOY1LOOP
-
-	RTS
-
-READJOY2:
-	LDA #$01
-	STA STROBE		; Bring strobe latch high
-	LDA #$00
-	STA STROBE		; Bring strobe latch low
-
-	LDX #$08
-
-.JOY2LOOP:
 	LDA JOY2		; Read Joypad 2
 	LSR A			; Shift bit into carry
 	ROL <JOY2IN		; Rotate carry into storage
 	DEX
-	BNE .JOY2LOOP
+	BNE .L1			; Loop through 8 joypad buttons
 
 	RTS
 
@@ -149,6 +133,31 @@ PAUSETEXT:
 	.db "PAUSE", $00
 
 	.org $FF00
+
+NMI:
+	PHA
+	TXA
+	PHA
+	TYA
+	PHA			; Push A/X/Y onto the stack
+
+	;; TODO
+
+	LDA #$00
+	STA OAMADDR
+	LDA #$02
+	STA OAMDMA		; DMA transfer $0200-$02FF to PPU OAM
+
+	JSR READJOY1		; Read controller 1
+	JSR READJOY2		; Read controller 2
+
+	PLA
+	TAY
+	PLA
+	TAX
+	PLA			; Pull A/X/Y from the stack
+
+	RTI			; Exit NMI
 
 RESET:
 	SEI			; Disable IRQ
@@ -188,40 +197,12 @@ VB2:
 RESETDONE:
 	JSR LOADPALS		; Load palettes
 
-	LDA #$00
-	LDX #$00
-	CLV			; Reset registers
 	JMP MAIN		; Go to main code loop
 
 IRQ:
 	;; TODO
 
 	RTI			; Exit IRQ
-
-NMI:
-	PHA
-	TXA
-	PHA
-	TYA
-	PHA			; Push A/X/Y onto the stack
-
-	;; TODO
-
-	LDA #$00
-	STA OAMADDR
-	LDA #$02
-	STA OAMDMA		; DMA transfer $0200-$02FF to PPU OAM
-
-	JSR READJOY1		; Read controller 1
-	JSR READJOY2		; Read controller 2
-
-	PLA
-	TAY
-	PLA
-	TAX
-	PLA			; Pull A/X/Y from the stack
-
-	RTI			; Exit NMI
 
 ;;;;;;;;;;
 

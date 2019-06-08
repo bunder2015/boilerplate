@@ -1,3 +1,9 @@
+;;;;;;;;;;
+;
+; registers.asm - a list of NES CPU register addresses
+;
+;;;;;;;;;;
+
 PPUCTRL		.equ $2000
 PPUMASK 	.equ $2001
 PPUSTATUS	.equ $2002
