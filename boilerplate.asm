@@ -117,8 +117,6 @@ MAIN:
 	STA <PPUCINPUT+1
 	JSR PPUCOPY		; Load menu BG attributes into PPU
 
-	JSR RESETSCR		; Reset PPU scrolling
-
 	LDA #$40
 	STA SPR1X
 	LDA #$90
@@ -135,6 +133,34 @@ MAIN:
 
 END:
 	JMP END
+
+	.data
+	.bank 0
+	.org $D000
+
+PALETTES:
+	.db $0F,$20,$10,$00	; BG palette 0
+	.db $0F,$15,$10,$02	; BG palette 1
+	.db $0F,$19,$10,$00	; BG palette 2
+	.db $0F,$28,$10,$00	; BG palette 3
+
+	.db $0F,$11,$10,$13	; SPR palette 0
+	.db $0F,$26,$10,$2A	; SPR palette 1
+	.db $0F,$25,$17,$00	; SPR palette 2
+	.db $0F,$1C,$2C,$3C	; SPR palette 3
+
+MENUATTR:
+	.db $55,$55,$55,$55,$00,$00,$00,$00,$55,$55,$55,$55
+
+MENUBG:
+	.db $80,$81,$81,$81,$81,$81,$81,$81,$81,$81,$81,$81,$81,$81,$82,$00
+	.db $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+	.db $83,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$84,$00
+	.db $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+	.db $85,$86,$86,$86,$86,$86,$86,$86,$86,$86,$86,$86,$86,$86,$87
+
+MENUTEXT:
+	.db "BOILER PLATE!"
 
 ;;;;;;;;;;
 
@@ -163,6 +189,8 @@ PPUCOPY:
 	INY
 	CPY <PPUCLEN		; Check to see if we have finished copying
 	BNE .L1			; Loop if we are not finished copying
+
+	JSR RESETSCR		; Reset PPU scrolling
 
 	RTS
 
@@ -195,34 +223,6 @@ RESETSCR:
 	STA PPUSCROLL
 	STA PPUSCROLL		; Reset PPU scrolling to top left corner
 	RTS
-
-	.data
-	.bank 1
-	.org $F000
-
-PALETTES:
-	.db $0F,$20,$10,$00	; BG palette 0
-	.db $0F,$15,$10,$02	; BG palette 1
-	.db $0F,$19,$10,$00	; BG palette 2
-	.db $0F,$28,$10,$00	; BG palette 3
-
-	.db $0F,$11,$10,$13	; SPR palette 0
-	.db $0F,$26,$10,$2A	; SPR palette 1
-	.db $0F,$25,$17,$00	; SPR palette 2
-	.db $0F,$1C,$2C,$3C	; SPR palette 3
-
-MENUATTR:
-	.db $55,$55,$55,$55,$00,$00,$00,$00,$55,$55,$55,$55
-
-MENUBG:
-	.db $80,$81,$81,$81,$81,$81,$81,$81,$81,$81,$81,$81,$81,$81,$82,$00
-	.db $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
-	.db $83,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$84,$00
-	.db $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
-	.db $85,$86,$86,$86,$86,$86,$86,$86,$86,$86,$86,$86,$86,$86,$87
-
-MENUTEXT:
-	.db "BOILER PLATE!"
 
 	.code
 	.bank 1
