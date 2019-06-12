@@ -71,6 +71,8 @@ DBGSP:
 	.org $C000
 
 MAIN:
+	JSR RENDERDIS		; Disable rendering to load PPU
+
 	LDA #$3F
 	STA <PPUCADDR
 	LDA #$00
@@ -85,9 +87,9 @@ MAIN:
 
 	LDA #$21
 	STA <PPUCADDR
-	LDA #$C9
+	LDA #$00
 	STA <PPUCADDR+1
-	LDA #79
+	LDA #153
 	STA <PPUCLEN+1
 	LDA #LOW(MENUBG)
 	STA <PPUCINPUT
@@ -97,7 +99,7 @@ MAIN:
 
 	LDA #$21
 	STA <PPUCADDR
-	LDA #$EA
+	LDA #$4A
 	STA <PPUCADDR+1
 	LDA #13
 	STA <PPUCLEN+1
@@ -109,7 +111,7 @@ MAIN:
 
 	LDA #$22
 	STA <PPUCADDR
-	LDA #$4A
+	LDA #$4D
 	STA <PPUCADDR+1
 	LDA #8
 	STA <PPUCLEN+1
@@ -121,7 +123,7 @@ MAIN:
 
 	LDA #$22
 	STA <PPUCADDR
-	LDA #$6A
+	LDA #$6D
 	STA <PPUCADDR+1
 	LDA #7
 	STA <PPUCLEN+1
@@ -133,9 +135,9 @@ MAIN:
 
 	LDA #$23
 	STA <PPUCADDR
-	LDA #$DA
+	LDA #$C0
 	STA <PPUCADDR+1
-	LDA #12
+	LDA #64
 	STA <PPUCLEN+1
 	LDA #LOW(MENUATTR)
 	STA <PPUCINPUT
@@ -143,21 +145,42 @@ MAIN:
 	STA <PPUCINPUT+1
 	JSR PPUCOPY		; Load menu BG attributes into PPU
 
-	LDA #$41
+	LDA #$60
 	STA SPR1X
-	LDA #$90
+	LDA #$8F
 	STA SPR1Y
 	LDA #$1C
 	STA SPR1TILE
-	LDA #$00
+	LDA #$01
 	STA SPR1ATTR		; Draw a basic cursor sprite
 
 	JSR NMIEN		; Enable PPU vblank NMI
-	JSR VBWAIT		; Wait for next vblank - fixes attribute memory being visible on frame 4
-	JSR RENDEREN		; Enable rendering
 
 MENULOOP:
+	LDA <JOY1IN
+	AND #%00000100		; Check if player 1 is pressing down
+	BEQ .UP
+	LDA SPR1Y
+	CMP #$8F		; Check if the cursor is in the top position
+	BNE .UP
+	LDA #$97
+	STA SPR1Y		; Move cursor down
+.UP
+	LDA <JOY1IN
+	AND #%00001000		; Check if player 1 is pressing up
+	BEQ .START
+	LDA SPR1Y
+	CMP #$97		; Check if the cursor is in the bottom position
+	BNE .START
+	LDA #$8F
+	STA SPR1Y		; Move cursor up
+.START
+	LDA <JOY1IN
+	AND #%00010000		; Check if player 1 is pressing start
+	BEQ .DONE
 	;; TODO
+	; if start
+.DONE
 
 	JSR VBWAIT		; Wait for next vblank
 	JMP MENULOOP
@@ -178,14 +201,22 @@ PALETTES:
 	.db $0F,$1C,$2C,$3C	; SPR palette 3
 
 MENUATTR:
-	.db $55,$55,$55,$55,$00,$00,$00,$00,$55,$55,$55,$55
+	.db $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+	.db $00,$55,$55,$55,$55,$55,$55,$00,$00,$55,$55,$55,$55,$55,$55,$00
+	.db $00,$00,$00,$FF,$FF,$FF,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+	.db $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
 
 MENUBG:
-	.db $80,$81,$81,$81,$81,$81,$81,$81,$81,$81,$81,$81,$81,$81,$82,$00
-	.db $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
-	.db $83,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$84,$00
-	.db $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
-	.db $85,$86,$86,$86,$86,$86,$86,$86,$86,$86,$86,$86,$86,$86,$87
+	.db $00,$00,$00,$00,$00,$00,$00,$00,$80,$81,$81,$81,$81,$81,$81,$81
+	.db $81,$81,$81,$81,$81,$81,$81,$81,$82,$00,$00,$00,$00,$00,$00,$00
+	.db $00,$00,$00,$00,$00,$00,$00,$00,$83,$00,$00,$00,$00,$00,$00,$00
+	.db $00,$00,$00,$00,$00,$00,$00,$00,$84,$00,$00,$00,$00,$00,$00,$00
+	.db $00,$00,$00,$00,$00,$00,$00,$00,$83,$00,$00,$00,$00,$00,$00,$00
+	.db $00,$00,$00,$00,$00,$00,$00,$00,$84,$00,$00,$00,$00,$00,$00,$00
+	.db $00,$00,$00,$00,$00,$00,$00,$00,$83,$00,$00,$00,$00,$00,$00,$00
+	.db $00,$00,$00,$00,$00,$00,$00,$00,$84,$00,$00,$00,$00,$00,$00,$00
+	.db $00,$00,$00,$00,$00,$00,$00,$00,$85,$86,$86,$86,$86,$86,$86,$86
+	.db $86,$86,$86,$86,$86,$86,$86,$86,$87
 
 MENUTEXT:
 	.db "BOILER PLATE!"
@@ -253,9 +284,15 @@ READJOYS:
 
 	RTS
 
+RENDERDIS:
+	LDA #$00000000
+	STA PPUMASK		; Disable BG and SPR
+
+	RTS
+
 RENDEREN:
 	LDA #%00011110
-	STA PPUMASK
+	STA PPUMASK		; Enable BG and SPR
 
 	RTS
 
@@ -267,10 +304,10 @@ RESETSCR:
 	RTS
 
 VBWAIT:
-	INC <NMIREADY
+	INC <NMIREADY		; Store waiting status
 .LOOP
-	LDA <NMIREADY
-	BNE .LOOP
+	LDA <NMIREADY		; Load waiting status
+	BNE .LOOP		; Loop if still waiting
 	RTS
 
 	.code
@@ -286,16 +323,19 @@ NMI:
 
 	;; TODO
 
-	LDA <NMIREADY
-	BEQ .OUT
+	LDA <NMIREADY		; Load waiting status
+	BEQ .OUT		; if we are not waiting, bail out of NMI
 
 	LDA #$00
 	STA OAMADDR
 	LDA #$02
 	STA OAMDMA		; DMA transfer $0200-$02FF to PPU OAM
 
+	JSR RENDEREN		; Enable rendering
+
 	JSR READJOYS		; Read controllers
-	DEC <NMIREADY
+
+	DEC <NMIREADY		; Reset waiting status
 
 .OUT
 	PLA
@@ -324,6 +364,8 @@ VB1:
 	BPL VB1			; Wait for first vblank
 
 MEMCLR:
+	LDA #$FF
+	STA $0200, X		; Initialize WRAM copy of PPU OAM
 	LDA #$00
 	STA $0000, X
 	STA $0100, X
@@ -332,8 +374,6 @@ MEMCLR:
 	STA $0500, X
 	STA $0600, X
 	STA $0700, X		; Initialize WRAM
-	LDA #$FF
-	STA $0200, X		; Initialize WRAM copy of PPU OAM
 	INX
 	BNE MEMCLR
 
