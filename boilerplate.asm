@@ -79,9 +79,9 @@ MAIN:
 	STA <PPUCADDR+1
 	LDA #32
 	STA <PPUCLEN+1
-	LDA #LOW(PALETTES)
+	LDA #LOW(MENUPALS)
 	STA <PPUCINPUT
-	LDA #HIGH(PALETTES)
+	LDA #HIGH(MENUPALS)
 	STA <PPUCINPUT+1
 	JSR PPUCOPY		; Load palettes into PPU
 
@@ -154,8 +154,6 @@ MAIN:
 	LDA #$01
 	STA SPR1ATTR		; Draw a basic cursor sprite
 
-	JSR NMIEN		; Enable PPU vblank NMI
-
 MENULOOP:
 	LDA <JOY1IN
 	AND #%00000100		; Check if player 1 is pressing down
@@ -178,27 +176,50 @@ MENULOOP:
 	LDA <JOY1IN
 	AND #%00010000		; Check if player 1 is pressing start
 	BEQ .DONE
-	;; TODO
-	; if start
-.DONE
+	LDA SPR1Y
+	CMP #$8F
+	BNE .STOPTS
+	JSR CLEARSCREEN
+	JMP START
+.STOPTS
+	LDA SPR1Y
+	CMP #$97
+	BNE .DONE
+	JSR CLEARSCREEN
+	JMP OPTIONS
 
+.DONE
+	JSR NMIEN		; Enable PPU vblank NMI
 	JSR VBWAIT		; Wait for next vblank
 	JMP MENULOOP
+
+OPTIONS:
+	JSR RENDERDIS		; Disable rendering to load PPU
+	;; TODO
+	; Display options menu
+OPTIONSLOOP:
+
+.DONE
+	JSR NMIEN		; Enable PPU vblank NMI
+	JSR VBWAIT		; Wait for next vblank
+	JMP OPTIONSLOOP
+
+START:
+	JSR RENDERDIS		; Disable rendering to load PPU
+	;; TODO
+	; Display start
+
+STARTLOOP:
+
+.DONE
+	JSR NMIEN		; Enable PPU vblank NMI
+	JSR VBWAIT		; Wait for next vblank
+	JMP STARTLOOP
+
 
 	.data
 	.bank 0
 	.org $D000
-
-PALETTES:
-	.db $0F,$20,$10,$00	; BG palette 0
-	.db $0F,$15,$10,$02	; BG palette 1
-	.db $0F,$19,$10,$00	; BG palette 2
-	.db $0F,$28,$10,$00	; BG palette 3
-
-	.db $0F,$11,$10,$13	; SPR palette 0
-	.db $0F,$26,$10,$2A	; SPR palette 1
-	.db $0F,$25,$17,$00	; SPR palette 2
-	.db $0F,$1C,$2C,$3C	; SPR palette 3
 
 MENUATTR:
 	.db $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
@@ -218,11 +239,22 @@ MENUBG:
 	.db $00,$00,$00,$00,$00,$00,$00,$00,$85,$86,$86,$86,$86,$86,$86,$86
 	.db $86,$86,$86,$86,$86,$86,$86,$86,$87
 
-MENUTEXT:
-	.db "BOILER PLATE!"
+MENUPALS:
+	.db $0F,$20,$10,$00	; BG palette 0
+	.db $0F,$15,$10,$02	; BG palette 1
+	.db $0F,$19,$10,$00	; BG palette 2
+	.db $0F,$28,$10,$00	; BG palette 3
+
+	.db $0F,$11,$10,$13	; SPR palette 0
+	.db $0F,$26,$10,$2A	; SPR palette 1
+	.db $0F,$25,$17,$00	; SPR palette 2
+	.db $0F,$1C,$2C,$3C	; SPR palette 3
 
 MENUONE:
 	.db "New Game"
+
+MENUTEXT:
+	.db "BOILER PLATE!"
 
 MENUTWO:
 	.db "Options"
@@ -234,6 +266,68 @@ MENUTWO:
 	.org $E000
 
 	;; TODO
+
+CLEARSCREEN:
+	JSR RENDERDIS
+	JSR NMIDIS
+	LDA PPUSTATUS
+
+	LDA #$20
+	STA PPUADDR
+	LDA #$00
+	STA PPUADDR
+	LDA #$08
+	STA <PPUCLEN
+	LDA #$00
+	STA <PPUCLEN+1
+
+	LDA #$00
+	LDX #$FF
+	LDY #$00
+.L1:
+	STA PPUDATA
+	INY
+	CPY <PPUCLEN+1
+	BNE .L1
+	LDY #$00
+	INX
+	CPX <PPUCLEN
+	BNE .L1
+
+	LDA PPUSTATUS
+
+	LDA #$3F
+	STA PPUADDR
+	LDA #$00
+	STA PPUADDR
+	LDA #$20
+	STA <PPUCLEN+1
+
+	LDA #$00
+	LDY #$00
+.L2:
+	STA PPUDATA
+	INY
+	CPY <PPUCLEN+1
+	BNE .L2
+
+	LDA #$FF
+	LDX #$00
+.L3:
+	STA $0200, X
+	INX
+	BNE .L3
+
+	JSR RESETSCR
+	JSR NMIEN		; Enable PPU vblank NMI
+	JSR VBWAIT		; Wait for next vblank
+	RTS
+
+NMIDIS:
+	LDA #%00000000
+	STA PPUCTRL
+
+	RTS
 
 NMIEN:
 	LDA #%10000000
