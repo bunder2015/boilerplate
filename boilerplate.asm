@@ -115,9 +115,9 @@ MAIN:
 	STA <PPUCADDR+1
 	LDA #8
 	STA <PPUCLEN+1
-	LDA #LOW(MENUONE)
+	LDA #LOW(MENUTEXT1)
 	STA <PPUCINPUT
-	LDA #HIGH(MENUONE)
+	LDA #HIGH(MENUTEXT1)
 	STA <PPUCINPUT+1
 	JSR PPUCOPY		; Load menu BG option text 1 into PPU
 
@@ -127,9 +127,9 @@ MAIN:
 	STA <PPUCADDR+1
 	LDA #7
 	STA <PPUCLEN+1
-	LDA #LOW(MENUTWO)
+	LDA #LOW(MENUTEXT2)
 	STA <PPUCINPUT
-	LDA #HIGH(MENUTWO)
+	LDA #HIGH(MENUTEXT2)
 	STA <PPUCINPUT+1
 	JSR PPUCOPY		; Load menu BG option text 2 into PPU
 
@@ -177,16 +177,16 @@ MENULOOP:
 	AND #%00010000		; Check if player 1 is pressing start
 	BEQ .DONE
 	LDA SPR1Y
-	CMP #$8F
+	CMP #$8F		; Check if the cursor is in the top position
 	BNE .STOPTS
-	JSR CLEARSCREEN
-	JMP START
+	JSR CLEARSCREEN		; Clear screen
+	JMP START		; Go to new game
 .STOPTS
 	LDA SPR1Y
-	CMP #$97
+	CMP #$97		; Check if the cursor is in the bottom position
 	BNE .DONE
-	JSR CLEARSCREEN
-	JMP OPTIONS
+	JSR CLEARSCREEN		; Clear screen
+	JMP OPTIONS		; Go to game options menu
 
 .DONE
 	JSR NMIEN		; Enable PPU vblank NMI
@@ -197,8 +197,10 @@ OPTIONS:
 	JSR RENDERDIS		; Disable rendering to load PPU
 	;; TODO
 	; Display options menu
-OPTIONSLOOP:
 
+OPTIONSLOOP:
+	;; TODO
+	; Input
 .DONE
 	JSR NMIEN		; Enable PPU vblank NMI
 	JSR VBWAIT		; Wait for next vblank
@@ -207,10 +209,11 @@ OPTIONSLOOP:
 START:
 	JSR RENDERDIS		; Disable rendering to load PPU
 	;; TODO
-	; Display start
+	; Display new game start
 
 STARTLOOP:
-
+	;; TODO
+	; Input
 .DONE
 	JSR NMIEN		; Enable PPU vblank NMI
 	JSR VBWAIT		; Wait for next vblank
@@ -222,22 +225,26 @@ STARTLOOP:
 	.org $D000
 
 MENUATTR:
-	.db $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
-	.db $00,$55,$55,$55,$55,$55,$55,$00,$00,$55,$55,$55,$55,$55,$55,$00
-	.db $00,$00,$00,$FF,$FF,$FF,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
-	.db $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+	.db $00,$00,$00,$00,$00,$00,$00,$00	; Top 2 rows of screen
+	.db $00,$00,$00,$00,$00,$00,$00,$00	; Second 2 rows of screen
+	.db $00,$55,$55,$55,$55,$55,$55,$00	; Third 2 rows of screen
+	.db $00,$55,$55,$55,$55,$55,$55,$00	; Fourth 2 rows of screen
+	.db $00,$00,$00,$FF,$FF,$FF,$00,$00	; Fifth 2 rows of screen
+	.db $00,$00,$00,$00,$00,$00,$00,$00	; Sixth 2 rows of screen
+	.db $00,$00,$00,$00,$00,$00,$00,$00	; Seventh 2 rows of screen
+	.db $00,$00,$00,$00,$00,$00,$00,$00	; Last row of screen (lower bytes)
 
 MENUBG:
 	.db $00,$00,$00,$00,$00,$00,$00,$00,$80,$81,$81,$81,$81,$81,$81,$81
-	.db $81,$81,$81,$81,$81,$81,$81,$81,$82,$00,$00,$00,$00,$00,$00,$00
+	.db $81,$81,$81,$81,$81,$81,$81,$81,$82,$00,$00,$00,$00,$00,$00,$00	; Row 1 of title
 	.db $00,$00,$00,$00,$00,$00,$00,$00,$83,$00,$00,$00,$00,$00,$00,$00
-	.db $00,$00,$00,$00,$00,$00,$00,$00,$84,$00,$00,$00,$00,$00,$00,$00
+	.db $00,$00,$00,$00,$00,$00,$00,$00,$84,$00,$00,$00,$00,$00,$00,$00	; Row 2 of title
 	.db $00,$00,$00,$00,$00,$00,$00,$00,$83,$00,$00,$00,$00,$00,$00,$00
-	.db $00,$00,$00,$00,$00,$00,$00,$00,$84,$00,$00,$00,$00,$00,$00,$00
+	.db $00,$00,$00,$00,$00,$00,$00,$00,$84,$00,$00,$00,$00,$00,$00,$00	; Row 3 of title
 	.db $00,$00,$00,$00,$00,$00,$00,$00,$83,$00,$00,$00,$00,$00,$00,$00
-	.db $00,$00,$00,$00,$00,$00,$00,$00,$84,$00,$00,$00,$00,$00,$00,$00
+	.db $00,$00,$00,$00,$00,$00,$00,$00,$84,$00,$00,$00,$00,$00,$00,$00	; Row 4 of title
 	.db $00,$00,$00,$00,$00,$00,$00,$00,$85,$86,$86,$86,$86,$86,$86,$86
-	.db $86,$86,$86,$86,$86,$86,$86,$86,$87
+	.db $86,$86,$86,$86,$86,$86,$86,$86,$87					; Row 5 of title
 
 MENUPALS:
 	.db $0F,$20,$10,$00	; BG palette 0
@@ -250,13 +257,13 @@ MENUPALS:
 	.db $0F,$25,$17,$00	; SPR palette 2
 	.db $0F,$1C,$2C,$3C	; SPR palette 3
 
-MENUONE:
-	.db "New Game"
-
 MENUTEXT:
 	.db "BOILER PLATE!"
 
-MENUTWO:
+MENUTEXT1:
+	.db "New Game"
+
+MENUTEXT2:
 	.db "Options"
 
 ;;;;;;;;;;
