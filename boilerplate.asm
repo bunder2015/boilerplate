@@ -37,6 +37,8 @@ PPUCADDR:
 PPUCINPUT:
 	.ds 2
 PPUCLEN:
+	.ds 2
+NMIREADY:
 	.ds 1
 
 	; Debugging
@@ -74,11 +76,11 @@ MAIN:
 	LDA #$00
 	STA <PPUCADDR+1
 	LDA #32
-	STA <PPUCLEN
+	STA <PPUCLEN+1
 	LDA #LOW(PALETTES)
 	STA <PPUCINPUT
 	LDA #HIGH(PALETTES)
-	STA PPUCINPUT+1
+	STA <PPUCINPUT+1
 	JSR PPUCOPY		; Load palettes into PPU
 
 	LDA #$21
@@ -86,11 +88,11 @@ MAIN:
 	LDA #$C9
 	STA <PPUCADDR+1
 	LDA #79
-	STA <PPUCLEN
+	STA <PPUCLEN+1
 	LDA #LOW(MENUBG)
 	STA <PPUCINPUT
 	LDA #HIGH(MENUBG)
-	STA PPUCINPUT+1
+	STA <PPUCINPUT+1
 	JSR PPUCOPY		; Load menu BG tiles into PPU
 
 	LDA #$21
@@ -98,41 +100,67 @@ MAIN:
 	LDA #$EA
 	STA <PPUCADDR+1
 	LDA #13
-	STA <PPUCLEN
+	STA <PPUCLEN+1
 	LDA #LOW(MENUTEXT)
 	STA <PPUCINPUT
 	LDA #HIGH(MENUTEXT)
-	STA PPUCINPUT+1
+	STA <PPUCINPUT+1
 	JSR PPUCOPY		; Load menu BG text into PPU
+
+	LDA #$22
+	STA <PPUCADDR
+	LDA #$4A
+	STA <PPUCADDR+1
+	LDA #8
+	STA <PPUCLEN+1
+	LDA #LOW(MENUONE)
+	STA <PPUCINPUT
+	LDA #HIGH(MENUONE)
+	STA <PPUCINPUT+1
+	JSR PPUCOPY		; Load menu BG option text 1 into PPU
+
+	LDA #$22
+	STA <PPUCADDR
+	LDA #$6A
+	STA <PPUCADDR+1
+	LDA #7
+	STA <PPUCLEN+1
+	LDA #LOW(MENUTWO)
+	STA <PPUCINPUT
+	LDA #HIGH(MENUTWO)
+	STA <PPUCINPUT+1
+	JSR PPUCOPY		; Load menu BG option text 2 into PPU
 
 	LDA #$23
 	STA <PPUCADDR
 	LDA #$DA
 	STA <PPUCADDR+1
 	LDA #12
-	STA <PPUCLEN
+	STA <PPUCLEN+1
 	LDA #LOW(MENUATTR)
 	STA <PPUCINPUT
 	LDA #HIGH(MENUATTR)
 	STA <PPUCINPUT+1
 	JSR PPUCOPY		; Load menu BG attributes into PPU
 
-	LDA #$40
+	LDA #$41
 	STA SPR1X
 	LDA #$90
 	STA SPR1Y
 	LDA #$1C
 	STA SPR1TILE
 	LDA #$00
-	STA SPR1ATTR		; Draw a basic sprite because reasons
+	STA SPR1ATTR		; Draw a basic cursor sprite
 
-	JSR RENDEREN		; Enable rendering
 	JSR NMIEN		; Enable PPU vblank NMI
+	JSR VBWAIT		; Wait for next vblank - fixes attribute memory being visible on frame 4
+	JSR RENDEREN		; Enable rendering
 
+MENULOOP:
 	;; TODO
 
-END:
-	JMP END
+	JSR VBWAIT		; Wait for next vblank
+	JMP MENULOOP
 
 	.data
 	.bank 0
@@ -162,6 +190,12 @@ MENUBG:
 MENUTEXT:
 	.db "BOILER PLATE!"
 
+MENUONE:
+	.db "New Game"
+
+MENUTWO:
+	.db "Options"
+
 ;;;;;;;;;;
 
 	.code
@@ -173,6 +207,7 @@ MENUTEXT:
 NMIEN:
 	LDA #%10000000
 	STA PPUCTRL		; Enable PPU vblank NMI
+
 	RTS
 
 PPUCOPY:
@@ -182,13 +217,18 @@ PPUCOPY:
 	LDA <PPUCADDR+1
 	STA PPUADDR		; Read address and set PPUADDR
 
-	LDY #$00		; Set loop counter
+	LDX #$FF
+	LDY #$00		; Set loop counters
 .L1
 	LDA [PPUCINPUT], Y	; Load data
 	STA PPUDATA		; Store to PPU
 	INY
-	CPY <PPUCLEN		; Check to see if we have finished copying
-	BNE .L1			; Loop if we are not finished copying
+	CPY <PPUCLEN+1
+	BNE .L1
+	LDY #$00
+	INX
+	CPX <PPUCLEN		; Check to see if we have finished copying
+	BNE .L1			; Loop if we have not finished copying
 
 	JSR RESETSCR		; Reset PPU scrolling
 
@@ -200,7 +240,7 @@ READJOYS:
 	LDA #$00
 	STA STROBE		; Bring strobe latch low
 
-	LDX #$08		; Set loop counter
+	LDX #8			; Set loop counter
 .L1:
 	LDA JOY1		; Read Joypad 1
 	LSR A			; Shift bit into carry
@@ -216,12 +256,21 @@ READJOYS:
 RENDEREN:
 	LDA #%00011110
 	STA PPUMASK
+
 	RTS
 
 RESETSCR:
 	LDA #$00
 	STA PPUSCROLL
 	STA PPUSCROLL		; Reset PPU scrolling to top left corner
+
+	RTS
+
+VBWAIT:
+	INC <NMIREADY
+.LOOP
+	LDA <NMIREADY
+	BNE .LOOP
 	RTS
 
 	.code
@@ -237,13 +286,18 @@ NMI:
 
 	;; TODO
 
+	LDA <NMIREADY
+	BEQ .OUT
+
 	LDA #$00
 	STA OAMADDR
 	LDA #$02
 	STA OAMDMA		; DMA transfer $0200-$02FF to PPU OAM
 
 	JSR READJOYS		; Read controllers
+	DEC <NMIREADY
 
+.OUT
 	PLA
 	TAY
 	PLA
@@ -255,7 +309,7 @@ NMI:
 RESET:
 	SEI			; Disable IRQ
 	CLD			; Disable decimal mode
-	LDX #$40
+	LDX #%01000000
 	STX APUFRAME		; Disable APU frame IRQ
 	LDX #$FF
 	TXS			; Initialize stack pointer
