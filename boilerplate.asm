@@ -40,6 +40,8 @@ PPUCLEN:
 	.ds 2
 NMIREADY:
 	.ds 1
+NT:
+	.ds 1
 
 	; Debugging
 DBGA:
@@ -163,7 +165,7 @@ MENULOOP:
 	BNE .UP
 	LDA #$97
 	STA SPR1Y		; Move cursor down
-.UP
+.UP:
 	LDA <JOY1IN
 	AND #%00001000		; Check if player 1 is pressing up
 	BEQ .START
@@ -172,7 +174,7 @@ MENULOOP:
 	BNE .START
 	LDA #$8F
 	STA SPR1Y		; Move cursor up
-.START
+.START:
 	LDA <JOY1IN
 	AND #%00010000		; Check if player 1 is pressing start
 	BEQ .DONE
@@ -181,27 +183,31 @@ MENULOOP:
 	BNE .STOPTS
 	JSR CLEARSCREEN		; Clear screen
 	JMP START		; Go to new game
-.STOPTS
+.STOPTS:
 	LDA SPR1Y
 	CMP #$97		; Check if the cursor is in the bottom position
 	BNE .DONE
-	JSR CLEARSCREEN		; Clear screen
+	JSR CLEARSPR		; Clear sprites from screen
 	JMP OPTIONS		; Go to game options menu
-
-.DONE
+.DONE:
+	LDA #$00
+	STA <NT			; Select nametable 0
 	JSR NMIEN		; Enable PPU vblank NMI
 	JSR VBWAIT		; Wait for next vblank
 	JMP MENULOOP
 
 OPTIONS:
 	JSR RENDERDIS		; Disable rendering to load PPU
+	JSR NMIDIS
 	;; TODO
 	; Display options menu
 
 OPTIONSLOOP:
 	;; TODO
 	; Input
-.DONE
+.DONE:
+	LDA #$01
+	STA <NT			; Select nametable 1
 	JSR NMIEN		; Enable PPU vblank NMI
 	JSR VBWAIT		; Wait for next vblank
 	JMP OPTIONSLOOP
@@ -214,7 +220,9 @@ START:
 STARTLOOP:
 	;; TODO
 	; Input
-.DONE
+.DONE:
+	LDA #$00
+	STA <NT			; Select nametable 0
 	JSR NMIEN		; Enable PPU vblank NMI
 	JSR VBWAIT		; Wait for next vblank
 	JMP STARTLOOP
@@ -232,7 +240,7 @@ MENUATTR:
 	.db $00,$00,$00,$FF,$FF,$FF,$00,$00	; Fifth 2 rows of screen
 	.db $00,$00,$00,$00,$00,$00,$00,$00	; Sixth 2 rows of screen
 	.db $00,$00,$00,$00,$00,$00,$00,$00	; Seventh 2 rows of screen
-	.db $00,$00,$00,$00,$00,$00,$00,$00	; Last row of screen (lower bytes)
+	.db $00,$00,$00,$00,$00,$00,$00,$00	; Last row of screen (lower nibbles)
 
 MENUBG:
 	.db $00,$00,$00,$00,$00,$00,$00,$00,$80,$81,$81,$81,$81,$81,$81,$81
@@ -275,9 +283,9 @@ MENUTEXT2:
 	;; TODO
 
 CLEARSCREEN:
-	JSR RENDERDIS
-	JSR NMIDIS
-	LDA PPUSTATUS
+	JSR RENDERDIS		; Disable rendering
+	JSR NMIDIS		; Disable PPU vblank NMI
+	LDA PPUSTATUS		; Read PPUSTATUS to reset PPUADDR latch
 
 	LDA #$20
 	STA PPUADDR
@@ -292,7 +300,7 @@ CLEARSCREEN:
 	LDX #$FF
 	LDY #$00
 .L1:
-	STA PPUDATA
+	STA PPUDATA		; Clear nametable 0 and 1
 	INY
 	CPY <PPUCLEN+1
 	BNE .L1
@@ -313,31 +321,37 @@ CLEARSCREEN:
 	LDA #$00
 	LDY #$00
 .L2:
-	STA PPUDATA
+	STA PPUDATA		; Clear attribute table
 	INY
 	CPY <PPUCLEN+1
 	BNE .L2
 
-	LDA #$FF
-	LDX #$00
-.L3:
-	STA $0200, X
-	INX
-	BNE .L3
-
-	JSR RESETSCR
+	JSR CLEARSPR		; Clear sprites from screen
+	JSR RESETSCR		; Reset PPU scrolling
 	JSR NMIEN		; Enable PPU vblank NMI
 	JSR VBWAIT		; Wait for next vblank
 	RTS
 
+CLEARSPR:
+	LDA #$FF
+	LDX #$00
+.L1:
+	STA $0200, X		; Remove all sprites from screen
+	INX
+	BNE .L1
+	RTS
+
 NMIDIS:
 	LDA #%00000000
-	STA PPUCTRL
+	LDX PPUSTATUS		; Read PPUSTATUS to clear vblank
+	STA PPUCTRL		; Disable PPU vblank NMI
 
 	RTS
 
 NMIEN:
 	LDA #%10000000
+	ORA <NT			; Add nametable selection to NMI enable flag
+	LDX PPUSTATUS		; Read PPUSTATUS to clear vblank
 	STA PPUCTRL		; Enable PPU vblank NMI
 
 	RTS
@@ -351,7 +365,7 @@ PPUCOPY:
 
 	LDX #$FF
 	LDY #$00		; Set loop counters
-.L1
+.L1:
 	LDA [PPUCINPUT], Y	; Load data
 	STA PPUDATA		; Store to PPU
 	INY
@@ -406,7 +420,7 @@ RESETSCR:
 
 VBWAIT:
 	INC <NMIREADY		; Store waiting status
-.LOOP
+.LOOP:
 	LDA <NMIREADY		; Load waiting status
 	BNE .LOOP		; Loop if still waiting
 	RTS
@@ -438,7 +452,7 @@ NMI:
 
 	DEC <NMIREADY		; Reset waiting status
 
-.OUT
+.OUT:
 	PLA
 	TAY
 	PLA
