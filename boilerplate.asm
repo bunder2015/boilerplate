@@ -42,6 +42,8 @@ NMIREADY:
 	.ds 1
 NT:
 	.ds 1
+WAITFRAMES:
+	.ds 1
 
 	; Debugging
 DBGA:
@@ -192,8 +194,10 @@ MENULOOP:
 .DONE:
 	LDA #$00
 	STA <NT			; Select nametable 0
+
 	JSR NMIEN		; Enable PPU vblank NMI
 	JSR VBWAIT		; Wait for next vblank
+
 	JMP MENULOOP
 
 OPTIONS:
@@ -208,8 +212,10 @@ OPTIONSLOOP:
 .DONE:
 	LDA #$01
 	STA <NT			; Select nametable 1
+
 	JSR NMIEN		; Enable PPU vblank NMI
 	JSR VBWAIT		; Wait for next vblank
+
 	JMP OPTIONSLOOP
 
 START:
@@ -223,10 +229,11 @@ STARTLOOP:
 .DONE:
 	LDA #$00
 	STA <NT			; Select nametable 0
+
 	JSR NMIEN		; Enable PPU vblank NMI
 	JSR VBWAIT		; Wait for next vblank
-	JMP STARTLOOP
 
+	JMP STARTLOOP
 
 	.data
 	.bank 0
@@ -285,8 +292,8 @@ MENUTEXT2:
 CLEARSCREEN:
 	JSR RENDERDIS		; Disable rendering
 	JSR NMIDIS		; Disable PPU vblank NMI
-	LDA PPUSTATUS		; Read PPUSTATUS to reset PPUADDR latch
 
+	LDA PPUSTATUS		; Read PPUSTATUS to reset PPUADDR latch
 	LDA #$20
 	STA PPUADDR
 	LDA #$00
@@ -310,7 +317,6 @@ CLEARSCREEN:
 	BNE .L1
 
 	LDA PPUSTATUS
-
 	LDA #$3F
 	STA PPUADDR
 	LDA #$00
@@ -330,6 +336,7 @@ CLEARSCREEN:
 	JSR RESETSCR		; Reset PPU scrolling
 	JSR NMIEN		; Enable PPU vblank NMI
 	JSR VBWAIT		; Wait for next vblank
+
 	RTS
 
 CLEARSPR:
@@ -339,10 +346,12 @@ CLEARSPR:
 	STA $0200, X		; Remove all sprites from screen
 	INX
 	BNE .L1
+
 	RTS
 
 NMIDIS:
 	LDA #%00000000
+	ORA <NT			; Add nametable selection to NMI disable flag
 	LDX PPUSTATUS		; Read PPUSTATUS to clear vblank
 	STA PPUCTRL		; Disable PPU vblank NMI
 
@@ -420,9 +429,14 @@ RESETSCR:
 
 VBWAIT:
 	INC <NMIREADY		; Store waiting status
-.LOOP:
+.L1:
 	LDA <NMIREADY		; Load waiting status
-	BNE .LOOP		; Loop if still waiting
+	BNE .L1			; Loop if still waiting
+	LDX <WAITFRAMES
+	BEQ .OUT		; Loop if we need to wait more frames
+	INC <NMIREADY
+	JMP .L1
+.OUT:
 	RTS
 
 	.code
@@ -436,8 +450,6 @@ NMI:
 	TYA
 	PHA			; Push A/X/Y onto the stack
 
-	;; TODO
-
 	LDA <NMIREADY		; Load waiting status
 	BEQ .OUT		; if we are not waiting, bail out of NMI
 
@@ -447,10 +459,12 @@ NMI:
 	STA OAMDMA		; DMA transfer $0200-$02FF to PPU OAM
 
 	JSR RENDEREN		; Enable rendering
-
 	JSR READJOYS		; Read controllers
 
 	DEC <NMIREADY		; Reset waiting status
+	LDA <WAITFRAMES
+	BEQ .OUT
+	DEC <WAITFRAMES
 
 .OUT:
 	PLA
@@ -501,7 +515,6 @@ RESETDONE:
 
 IRQ:
 	;; TODO
-
 	RTI			; Exit IRQ
 
 ;;;;;;;;;;
