@@ -76,6 +76,7 @@ DBGSP:
 
 MAIN:
 	JSR RENDERDIS		; Disable rendering to load PPU
+	JSR NMIDIS
 
 	LDA #$3F
 	STA <PPUCADDR
@@ -158,6 +159,12 @@ MAIN:
 	LDA #$01
 	STA SPR1ATTR		; Draw a basic cursor sprite
 
+	LDA #$00
+	STA <NT			; Select nametable 0
+
+	JSR NMIEN		; Enable PPU vblank NMI
+	JSR VBWAIT		; Wait for next vblank
+
 MENULOOP:
 	LDA <JOY1IN
 	AND #%00000100		; Check if player 1 is pressing down
@@ -170,13 +177,13 @@ MENULOOP:
 .UP:
 	LDA <JOY1IN
 	AND #%00001000		; Check if player 1 is pressing up
-	BEQ .START
+	BEQ .STNEW
 	LDA SPR1Y
 	CMP #$97		; Check if the cursor is in the bottom position
-	BNE .START
+	BNE .STNEW
 	LDA #$8F
 	STA SPR1Y		; Move cursor up
-.START:
+.STNEW:
 	LDA <JOY1IN
 	AND #%00010000		; Check if player 1 is pressing start
 	BEQ .DONE
@@ -192,12 +199,7 @@ MENULOOP:
 	JSR CLEARSPR		; Clear sprites from screen
 	JMP OPTIONS		; Go to game options menu
 .DONE:
-	LDA #$00
-	STA <NT			; Select nametable 0
-
-	JSR NMIEN		; Enable PPU vblank NMI
 	JSR VBWAIT		; Wait for next vblank
-
 	JMP MENULOOP
 
 OPTIONS:
@@ -205,34 +207,35 @@ OPTIONS:
 	JSR NMIDIS
 	;; TODO
 	; Display options menu
-
-OPTIONSLOOP:
-	;; TODO
-	; Input
-.DONE:
 	LDA #$01
 	STA <NT			; Select nametable 1
 
 	JSR NMIEN		; Enable PPU vblank NMI
 	JSR VBWAIT		; Wait for next vblank
 
+OPTIONSLOOP:
+	;; TODO
+	; Input
+.DONE:
+	JSR VBWAIT		; Wait for next vblank
 	JMP OPTIONSLOOP
 
 START:
 	JSR RENDERDIS		; Disable rendering to load PPU
+	JSR NMIDIS
 	;; TODO
 	; Display new game start
-
-STARTLOOP:
-	;; TODO
-	; Input
-.DONE:
 	LDA #$00
 	STA <NT			; Select nametable 0
 
 	JSR NMIEN		; Enable PPU vblank NMI
 	JSR VBWAIT		; Wait for next vblank
 
+STARTLOOP:
+	;; TODO
+	; Input
+.DONE:
+	JSR VBWAIT		; Wait for next vblank
 	JMP STARTLOOP
 
 	.data
@@ -307,7 +310,7 @@ CLEARSCREEN:
 	LDX #$FF
 	LDY #$00
 .L1:
-	STA PPUDATA		; Clear nametable 0 and 1
+	STA PPUDATA		; Clear nametable 0 and 1 and attributes
 	INY
 	CPY <PPUCLEN+1
 	BNE .L1
@@ -324,10 +327,10 @@ CLEARSCREEN:
 	LDA #$20
 	STA <PPUCLEN+1
 
-	LDA #$00
+	LDA #$0F		; 0F = black, 00 = gray
 	LDY #$00
 .L2:
-	STA PPUDATA		; Clear attribute table
+	STA PPUDATA		; Clear palette table
 	INY
 	CPY <PPUCLEN+1
 	BNE .L2
