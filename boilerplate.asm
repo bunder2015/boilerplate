@@ -34,6 +34,8 @@ JOY1IN:
 	.ds 1			; Joypad 1 input
 JOY2IN:
 	.ds 1			; Joypad 2 input
+NMIEN:
+	.ds 1			; NMI enable
 NMIREADY:
 	.ds 1			; Waiting for next frame
 NT:
@@ -80,7 +82,6 @@ DBGSP:
 
 MAIN:
 	JSR RENDERDIS		; Disable rendering to load PPU
-	JSR NMIDIS
 
 	LDA #$3F
 	STA <PPUCADDR
@@ -163,6 +164,8 @@ MAIN:
 	LDA #$01
 	STA SPR1ATTR		; Draw a basic cursor sprite
 
+	LDA #%10000000
+	STA <NMIEN		; Enable NMI
 	LDA #%00000000
 	STA <BGPT		; Select BG pattern table 0
 	LDA #%00001000
@@ -170,7 +173,7 @@ MAIN:
 	LDA #%00000000
 	STA <NT			; Select nametable 0
 
-	JSR NMIEN		; Enable PPU vblank NMI
+	JSR UPDATE2000		; Update PPU controls
 	JSR VBWAIT		; Wait for next vblank
 
 MENULOOP:
@@ -212,7 +215,7 @@ MENULOOP:
 
 OPTIONS:
 	JSR RENDERDIS		; Disable rendering to load PPU
-	JSR NMIDIS
+
 	;; TODO
 	; Display options menu
 
@@ -223,7 +226,7 @@ OPTIONS:
 	LDA #%00000001
 	STA <NT			; Select nametable 0
 
-	JSR NMIEN		; Enable PPU vblank NMI
+	JSR UPDATE2000		; Update PPU controls
 	JSR VBWAIT		; Wait for next vblank
 
 OPTIONSLOOP:
@@ -235,10 +238,12 @@ OPTIONSLOOP:
 
 START:
 	JSR RENDERDIS		; Disable rendering to load PPU
-	JSR NMIDIS
+
 	;; TODO
 	; Display new game start
 
+	LDA #%10000000
+	STA <NMIEN		; Enable NMI
 	LDA #%00000000
 	STA <BGPT		; Select BG pattern table 0
 	LDA #%00001000
@@ -246,7 +251,7 @@ START:
 	LDA #%00000000
 	STA <NT			; Select nametable 0
 
-	JSR NMIEN		; Enable PPU vblank NMI
+	JSR UPDATE2000		; Update PPU controls
 	JSR VBWAIT		; Wait for next vblank
 
 STARTLOOP:
@@ -312,7 +317,6 @@ MENUTEXT2:
 
 CLEARSCREEN:
 	JSR RENDERDIS		; Disable rendering
-	JSR NMIDIS		; Disable PPU vblank NMI
 
 	LDA PPUSTATUS		; Read PPUSTATUS to reset PPUADDR latch
 	LDA #$20
@@ -345,7 +349,7 @@ CLEARSCREEN:
 	LDA #$20
 	STA <PPUCLEN+1
 
-	LDA #$0F		; 0F sets the screen colours to all black
+	LDA #$0F		; 0F sets the palette colours to all black
 	LDY #$00
 .L2:
 	STA PPUDATA		; Clear palette table
@@ -355,7 +359,7 @@ CLEARSCREEN:
 
 	JSR CLEARSPR		; Clear sprites from screen
 	JSR RESETSCR		; Reset PPU scrolling
-	JSR NMIEN		; Enable PPU vblank NMI
+	JSR UPDATE2000		; Update PPU controls
 	JSR VBWAIT		; Wait for next vblank
 
 	RTS
@@ -367,26 +371,6 @@ CLEARSPR:
 	STA $0200, X		; Remove all sprites from screen
 	INX
 	BNE .L1
-
-	RTS
-
-NMIDIS:
-	LDA #%00000000
-	ORA <BGPT
-	ORA <SPRPT		; Add pattern table selectons to NMI disable flag
-	ORA <NT			; Add nametable selection to NMI disable flag
-	LDX PPUSTATUS		; Read PPUSTATUS to clear vblank
-	STA PPUCTRL		; Disable PPU vblank NMI
-
-	RTS
-
-NMIEN:
-	LDA #%10000000
-	ORA <BGPT
-	ORA <SPRPT		; Add pattern table selections to NMI disable flag
-	ORA <NT			; Add nametable selection to NMI disable flag
-	LDX PPUSTATUS		; Read PPUSTATUS to clear vblank
-	STA PPUCTRL		; Enable PPU vblank NMI
 
 	RTS
 
@@ -464,6 +448,17 @@ VBWAIT:
 .OUT:
 	RTS
 
+UPDATE2000:
+	LDA #%00000000
+	ORA <NMIEN		; Add NMI toggle to status update
+	ORA <BGPT
+	ORA <SPRPT		; Add pattern table selectons to status update
+	ORA <NT			; Add nametable selection to status update
+	LDX PPUSTATUS		; Read PPUSTATUS to clear vblank
+	STA PPUCTRL		; Write update byte to PPU
+
+	RTS
+
 	.code
 	.bank 1
 	.org $FF00
@@ -513,11 +508,11 @@ RESET:
 	STX DMCFREQ		; Disable APU DMC IRQ
 	BIT PPUSTATUS		; Clear vblank bit if console reset during a vblank
 
-VB1:
+.VB1:
 	BIT PPUSTATUS
-	BPL VB1			; Wait for first vblank
+	BPL .VB1		; Wait for first vblank
 
-MEMCLR:
+.MEMCLR:
 	LDA #$FF
 	STA $0200, X		; Initialize WRAM copy of PPU OAM
 	LDA #$00
@@ -529,13 +524,13 @@ MEMCLR:
 	STA $0600, X
 	STA $0700, X		; Initialize WRAM
 	INX
-	BNE MEMCLR
+	BNE .MEMCLR
 
-VB2:
+.VB2:
 	BIT PPUSTATUS
-	BPL VB2			; Wait for second vblank
+	BPL .VB2		; Wait for second vblank
 
-RESETDONE:
+.RESETDONE:
 	JMP MAIN		; Go to main code loop
 
 IRQ:
