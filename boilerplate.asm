@@ -28,22 +28,26 @@
 	; Zero-page memory $0000-00FF
 	.zp
 
+BGPT:
+	.ds 1			; BG pattern table to display
 JOY1IN:
 	.ds 1			; Joypad 1 input
 JOY2IN:
 	.ds 1			; Joypad 2 input
-PPUCADDR:
-	.ds 2
-PPUCINPUT:
-	.ds 2
-PPUCLEN:
-	.ds 2
 NMIREADY:
-	.ds 1
+	.ds 1			; Waiting for next frame
 NT:
-	.ds 1
+	.ds 1			; Nametable to display
+PPUCADDR:
+	.ds 2			; PPUCOPY destination address
+PPUCINPUT:
+	.ds 2			; PPUCOPY source address
+PPUCLEN:
+	.ds 2			; Length of PPUCOPY source data
+SPRPT:
+	.ds 1			; Sprite pattern table to display
 WAITFRAMES:
-	.ds 1
+	.ds 1			; Number of frames to wait
 
 	; Debugging
 DBGA:
@@ -154,12 +158,16 @@ MAIN:
 	STA SPR1X
 	LDA #$8F
 	STA SPR1Y
-	LDA #$1C
+	LDA #$01
 	STA SPR1TILE
 	LDA #$01
 	STA SPR1ATTR		; Draw a basic cursor sprite
 
-	LDA #$00
+	LDA #%00000000
+	STA <BGPT		; Select BG pattern table 0
+	LDA #%00001000
+	STA <SPRPT		; Select Sprite pattern table 1
+	LDA #%00000000
 	STA <NT			; Select nametable 0
 
 	JSR NMIEN		; Enable PPU vblank NMI
@@ -196,7 +204,7 @@ MENULOOP:
 	LDA SPR1Y
 	CMP #$97		; Check if the cursor is in the bottom position
 	BNE .DONE
-	JSR CLEARSPR		; Clear sprites from screen
+	JSR CLEARSPR		; Clear sprites
 	JMP OPTIONS		; Go to game options menu
 .DONE:
 	JSR VBWAIT		; Wait for next vblank
@@ -207,8 +215,13 @@ OPTIONS:
 	JSR NMIDIS
 	;; TODO
 	; Display options menu
-	LDA #$01
-	STA <NT			; Select nametable 1
+
+	LDA #%00000000
+	STA <BGPT		; Select BG pattern table 0
+	LDA #%00001000
+	STA <SPRPT		; Select Sprite pattern table 1
+	LDA #%00000001
+	STA <NT			; Select nametable 0
 
 	JSR NMIEN		; Enable PPU vblank NMI
 	JSR VBWAIT		; Wait for next vblank
@@ -225,7 +238,12 @@ START:
 	JSR NMIDIS
 	;; TODO
 	; Display new game start
-	LDA #$00
+
+	LDA #%00000000
+	STA <BGPT		; Select BG pattern table 0
+	LDA #%00001000
+	STA <SPRPT		; Select Sprite pattern table 1
+	LDA #%00000000
 	STA <NT			; Select nametable 0
 
 	JSR NMIEN		; Enable PPU vblank NMI
@@ -327,7 +345,7 @@ CLEARSCREEN:
 	LDA #$20
 	STA <PPUCLEN+1
 
-	LDA #$0F		; 0F = black, 00 = gray
+	LDA #$0F		; 0F sets the screen colours to all black
 	LDY #$00
 .L2:
 	STA PPUDATA		; Clear palette table
@@ -354,6 +372,8 @@ CLEARSPR:
 
 NMIDIS:
 	LDA #%00000000
+	ORA <BGPT
+	ORA <SPRPT		; Add pattern table selectons to NMI disable flag
 	ORA <NT			; Add nametable selection to NMI disable flag
 	LDX PPUSTATUS		; Read PPUSTATUS to clear vblank
 	STA PPUCTRL		; Disable PPU vblank NMI
@@ -362,7 +382,9 @@ NMIDIS:
 
 NMIEN:
 	LDA #%10000000
-	ORA <NT			; Add nametable selection to NMI enable flag
+	ORA <BGPT
+	ORA <SPRPT		; Add pattern table selections to NMI disable flag
+	ORA <NT			; Add nametable selection to NMI disable flag
 	LDX PPUSTATUS		; Read PPUSTATUS to clear vblank
 	STA PPUCTRL		; Enable PPU vblank NMI
 
