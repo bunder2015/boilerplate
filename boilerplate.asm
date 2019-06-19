@@ -54,16 +54,16 @@ WAITFRAMES:
 	; Debugging
 DBGA:
 	.ds 1			; A register
-DBGX:
-	.ds 1			; X register
-DBGY:
-	.ds 1			; Y register
 DBGPC:
 	.ds 2			; Program counter
 DBGPS:
 	.ds 1			; Processor status
 DBGSP:
 	.ds 1			; Stack pointer
+DBGX:
+	.ds 1			; X register
+DBGY:
+	.ds 1			; Y register
 
 ;;;;;;;;;;
 
@@ -161,7 +161,7 @@ MAIN:
 	STA SPR1Y
 	LDA #$01
 	STA SPR1TILE
-	LDA #$01
+	LDA #%00000001
 	STA SPR1ATTR		; Draw a basic cursor sprite
 
 	LDA #%10000000
@@ -169,14 +169,14 @@ MAIN:
 	LDA #%00000000
 	STA <BGPT		; Select BG pattern table 0
 	LDA #%00001000
-	STA <SPRPT		; Select Sprite pattern table 1
+	STA <SPRPT		; Select sprite pattern table 1
 	LDA #%00000000
 	STA <NT			; Select nametable 0
 
 	JSR UPDATE2000		; Update PPU controls
 	JSR VBWAIT		; Wait for next vblank
 
-MENULOOP:
+.MENULOOP:
 	LDA <JOY1IN
 	AND #%00000100		; Check if player 1 is pressing down
 	BEQ .UP
@@ -211,7 +211,9 @@ MENULOOP:
 	JMP OPTIONS		; Go to game options menu
 .DONE:
 	JSR VBWAIT		; Wait for next vblank
-	JMP MENULOOP
+	JMP .MENULOOP
+
+;;;;;;;;;;
 
 OPTIONS:
 	JSR RENDERDIS		; Disable rendering to load PPU
@@ -222,19 +224,22 @@ OPTIONS:
 	LDA #%00000000
 	STA <BGPT		; Select BG pattern table 0
 	LDA #%00001000
-	STA <SPRPT		; Select Sprite pattern table 1
+	STA <SPRPT		; Select sprite pattern table 1
 	LDA #%00000001
-	STA <NT			; Select nametable 0
+	STA <NT			; Select nametable 1
 
 	JSR UPDATE2000		; Update PPU controls
 	JSR VBWAIT		; Wait for next vblank
 
-OPTIONSLOOP:
+.OPTIONSLOOP:
 	;; TODO
 	; Input
+
 .DONE:
 	JSR VBWAIT		; Wait for next vblank
-	JMP OPTIONSLOOP
+	JMP .OPTIONSLOOP
+
+;;;;;;;;;;
 
 START:
 	JSR RENDERDIS		; Disable rendering to load PPU
@@ -247,19 +252,22 @@ START:
 	LDA #%00000000
 	STA <BGPT		; Select BG pattern table 0
 	LDA #%00001000
-	STA <SPRPT		; Select Sprite pattern table 1
+	STA <SPRPT		; Select sprite pattern table 1
 	LDA #%00000000
 	STA <NT			; Select nametable 0
 
 	JSR UPDATE2000		; Update PPU controls
 	JSR VBWAIT		; Wait for next vblank
 
-STARTLOOP:
+.STARTLOOP:
 	;; TODO
 	; Input
+
 .DONE:
 	JSR VBWAIT		; Wait for next vblank
-	JMP STARTLOOP
+	JMP .STARTLOOP
+
+;;;;;;;;;;
 
 	.data
 	.bank 0
@@ -346,7 +354,7 @@ CLEARSCREEN:
 	STA PPUADDR
 	LDA #$00
 	STA PPUADDR
-	LDA #$20
+	LDA #32
 	STA <PPUCLEN+1
 
 	LDA #$0F		; 0F sets the palette colours to all black
@@ -365,7 +373,7 @@ CLEARSCREEN:
 	RTS
 
 CLEARSPR:
-	LDA #$FF
+	LDA #$FF		; FF moves the sprites off the screen
 	LDX #$00
 .L1:
 	STA $0200, X		; Remove all sprites from screen
@@ -436,6 +444,17 @@ RESETSCR:
 
 	RTS
 
+UPDATE2000:
+	LDA #%00000000
+	ORA <NMIEN		; Add NMI toggle to status update
+	ORA <BGPT
+	ORA <SPRPT		; Add pattern table selectons to status update
+	ORA <NT			; Add nametable selection to status update
+	LDX PPUSTATUS		; Read PPUSTATUS to clear vblank
+	STA PPUCTRL		; Write update byte to PPU
+
+	RTS
+
 VBWAIT:
 	INC <NMIREADY		; Store waiting status
 .L1:
@@ -448,16 +467,7 @@ VBWAIT:
 .OUT:
 	RTS
 
-UPDATE2000:
-	LDA #%00000000
-	ORA <NMIEN		; Add NMI toggle to status update
-	ORA <BGPT
-	ORA <SPRPT		; Add pattern table selectons to status update
-	ORA <NT			; Add nametable selection to status update
-	LDX PPUSTATUS		; Read PPUSTATUS to clear vblank
-	STA PPUCTRL		; Write update byte to PPU
-
-	RTS
+;;;;;;;;;;
 
 	.code
 	.bank 1
@@ -494,6 +504,8 @@ NMI:
 	PLA			; Pull A/X/Y from the stack
 
 	RTI			; Exit NMI
+
+;;;;;;;;;;
 
 RESET:
 	SEI			; Disable IRQ
@@ -532,6 +544,8 @@ RESET:
 
 .RESETDONE:
 	JMP MAIN		; Go to main code loop
+
+;;;;;;;;;;
 
 IRQ:
 	;; TODO
