@@ -4,8 +4,11 @@
 ;
 ;;;;;;;;;;
 
-	; Generate .lst file for debugging
-	.list
+DEBUG				; Comment this line to disable debugging
+
+	.ifdef DEBUG
+	.list			; Generate .lst file for debugging
+	.endif
 
 	; iNES header
 	.inesprg 1		; 1x16k PRG ROM
@@ -52,6 +55,7 @@ WAITFRAMES:
 	.ds 1			; Number of frames to wait
 
 	; Debugging
+	.ifdef DEBUG
 DBGA:
 	.ds 1			; A register
 DBGPC:
@@ -64,6 +68,7 @@ DBGX:
 	.ds 1			; X register
 DBGY:
 	.ds 1			; Y register
+	.endif
 
 ;;;;;;;;;;
 
@@ -172,8 +177,8 @@ MAIN:
 	STA <SPRPT		; Select sprite pattern table 1
 	LDA #%00000000
 	STA <NT			; Select nametable 0
-
 	JSR UPDATE2000		; Update PPU controls
+
 	JSR VBWAIT		; Wait for next vblank
 
 .MENULOOP:
@@ -202,7 +207,7 @@ MAIN:
 	CMP #$8F		; Check if the cursor is in the top position
 	BNE .STOPTS
 	JSR CLEARSCREEN		; Clear screen
-	JMP START		; Go to new game
+	JMP NEWGAME		; Go to new game
 .STOPTS:
 	LDA SPR1Y
 	CMP #$97		; Check if the cursor is in the bottom position
@@ -227,8 +232,8 @@ OPTIONS:
 	STA <SPRPT		; Select sprite pattern table 1
 	LDA #%00000001
 	STA <NT			; Select nametable 1
-
 	JSR UPDATE2000		; Update PPU controls
+
 	JSR VBWAIT		; Wait for next vblank
 
 .OPTIONSLOOP:
@@ -241,7 +246,7 @@ OPTIONS:
 
 ;;;;;;;;;;
 
-START:
+NEWGAME:
 	JSR RENDERDIS		; Disable rendering to load PPU
 
 	;; TODO
@@ -255,8 +260,8 @@ START:
 	STA <SPRPT		; Select sprite pattern table 1
 	LDA #%00000000
 	STA <NT			; Select nametable 0
-
 	JSR UPDATE2000		; Update PPU controls
+
 	JSR VBWAIT		; Wait for next vblank
 
 .STARTLOOP:
@@ -308,12 +313,25 @@ MENUPALS:
 
 MENUTEXT:
 	.db "BOILER PLATE!"
-
 MENUTEXT1:
 	.db "New Game"
-
 MENUTEXT2:
 	.db "Options"
+
+	.ifdef DEBUG
+DBGTEXT1:
+	.db "BREAK AT PC: "
+DBGTEXT2:
+	.db "A: "
+DBGTEXT3:
+	.db "X: "
+DBGTEXT4:
+	.db "Y: "
+DBGTEXT5:
+	.db "SP: "
+DBGTEXT6:
+	.db "PS: "
+	.endif
 
 ;;;;;;;;;;
 
@@ -548,7 +566,31 @@ RESET:
 ;;;;;;;;;;
 
 IRQ:
-	;; TODO
+	.ifdef DEBUG
+	STA <DBGA		; Stash accumulator
+	PLA			; Pull processor status from the stack
+	PHA			; Return processor status to the stack
+	AND #%00010000		; Check for "B flag"
+	BEQ .NOBRK		; Branch if not set
+	STX <DBGX		; Stash X register
+	STY <DBGY		; Stash Y register
+	TSX
+	STX <DBGSP		; Stash stack pointer
+	PLA			; Pull processor status from the stack
+	STA <DBGPS		; Stash processor status
+	PLA
+	STA <DBGPC+1
+	PLA			; Pull program counter from the stack
+	STA <DBGPC		; Stash program counter
+	;; TODO - display crash report on screen
+.LOOP:
+	JMP .LOOP		; Infinite loop
+.NOBRK:
+	LDA <DBGA		; Restore accumulator
+	.else
+	;; TODO - sound code IRQ
+	.endif
+
 	RTI			; Exit IRQ
 
 ;;;;;;;;;;
