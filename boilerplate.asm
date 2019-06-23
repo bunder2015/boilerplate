@@ -582,6 +582,8 @@ IRQ:
 	STA <DBGPC+1
 	PLA			; Pull program counter from the stack
 	STA <DBGPC		; Stash program counter
+	DEC <DBGPC+1
+	DEC <DBGPC+1		; Return program counter to address that caused the BRK
 	;; TODO - display crash report on screen
 .LOOP:
 	JMP .LOOP		; Infinite loop
