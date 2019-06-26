@@ -68,6 +68,10 @@ DBGX:
 	.ds 1			; X register
 DBGY:
 	.ds 1			; Y register
+PBTEMP1:
+	.ds 1
+PRINTB:
+	.ds 1
 	.endif
 
 ;;;;;;;;;;
@@ -92,6 +96,8 @@ MAIN:
 	STA <PPUCADDR
 	LDA #$00
 	STA <PPUCADDR+1
+	LDA #0
+	STA <PPUCLEN
 	LDA #32
 	STA <PPUCLEN+1
 	LDA #LOW(MENUPALS)
@@ -104,6 +110,8 @@ MAIN:
 	STA <PPUCADDR
 	LDA #$00
 	STA <PPUCADDR+1
+	LDA #0
+	STA <PPUCLEN
 	LDA #153
 	STA <PPUCLEN+1
 	LDA #LOW(MENUBG)
@@ -116,6 +124,8 @@ MAIN:
 	STA <PPUCADDR
 	LDA #$4A
 	STA <PPUCADDR+1
+	LDA #0
+	STA <PPUCLEN
 	LDA #13
 	STA <PPUCLEN+1
 	LDA #LOW(MENUTEXT)
@@ -128,6 +138,8 @@ MAIN:
 	STA <PPUCADDR
 	LDA #$4D
 	STA <PPUCADDR+1
+	LDA #0
+	STA <PPUCLEN
 	LDA #8
 	STA <PPUCLEN+1
 	LDA #LOW(MENUTEXT1)
@@ -140,6 +152,8 @@ MAIN:
 	STA <PPUCADDR
 	LDA #$6D
 	STA <PPUCADDR+1
+	LDA #0
+	STA <PPUCLEN
 	LDA #7
 	STA <PPUCLEN+1
 	LDA #LOW(MENUTEXT2)
@@ -152,6 +166,8 @@ MAIN:
 	STA <PPUCADDR
 	LDA #$C0
 	STA <PPUCADDR+1
+	LDA #0
+	STA <PPUCLEN
 	LDA #64
 	STA <PPUCLEN+1
 	LDA #LOW(MENUATTR)
@@ -223,8 +239,7 @@ MAIN:
 OPTIONS:
 	JSR RENDERDIS		; Disable rendering to load PPU
 
-	;; TODO
-	; Display options menu
+	;; TODO - Display options menu
 
 	LDA #%00000000
 	STA <BGPT		; Select BG pattern table 0
@@ -237,8 +252,7 @@ OPTIONS:
 	JSR VBWAIT		; Wait for next vblank
 
 .OPTIONSLOOP:
-	;; TODO
-	; Input
+	;; TODO - Input
 
 .DONE:
 	JSR VBWAIT		; Wait for next vblank
@@ -249,8 +263,7 @@ OPTIONS:
 NEWGAME:
 	JSR RENDERDIS		; Disable rendering to load PPU
 
-	;; TODO
-	; Display new game start
+	;; TODO - Display new game start
 
 	LDA #%10000000
 	STA <NMIEN		; Enable NMI
@@ -265,8 +278,7 @@ NEWGAME:
 	JSR VBWAIT		; Wait for next vblank
 
 .STARTLOOP:
-	;; TODO
-	; Input
+	;; TODO - Input
 
 .DONE:
 	JSR VBWAIT		; Wait for next vblank
@@ -319,6 +331,19 @@ MENUTEXT2:
 	.db "Options"
 
 	.ifdef DEBUG
+DBGATTR:
+	.db $55,$55,$55,$55,$55,$55,$55,$55	; Top 2 rows of screen
+	.db $55,$55,$55,$55,$55,$55,$55,$55	; Second 2 rows of screen
+	.db $55,$55,$55,$55,$55,$55,$55,$55	; Third 2 rows of screen
+	.db $55,$55,$55,$55,$55,$55,$55,$55	; Fourth 2 rows of screen
+	.db $55,$55,$55,$55,$55,$55,$55,$55	; Fifth 2 rows of screen
+	.db $55,$55,$55,$55,$55,$55,$55,$55	; Sixth 2 rows of screen
+	.db $55,$55,$55,$55,$55,$55,$55,$55	; Seventh 2 rows of screen
+	.db $05,$05,$05,$05,$05,$05,$05,$05	; Last row of screen (lower nibbles)
+
+DBGPALS:
+	.db $01,$20,$10,$00	; BG palette 0
+
 DBGTEXT1:
 	.db "BREAK AT PC: "
 DBGTEXT2:
@@ -485,6 +510,416 @@ VBWAIT:
 .OUT:
 	RTS
 
+	.ifdef DEBUG
+BREAK:
+	STY <DBGY		; Stash Y register
+	TSX
+	INX
+	INX
+	INX
+	STX <DBGSP		; Stash stack pointer
+	PLA			; Pull processor status from the stack
+	STA <DBGPS		; Stash processor status
+	PLA
+	STA <DBGPC+1
+	PLA			; Pull program counter from the stack
+	STA <DBGPC		; Stash program counter
+	DEC <DBGPC+1
+	DEC <DBGPC+1		; Return program counter to address that caused the BRK
+
+	;; TODO - stop sound
+	JSR RENDERDIS
+	JSR CLEARSCREEN
+
+	LDA #$3F
+	STA <PPUCADDR
+	LDA #$00
+	STA <PPUCADDR+1
+	LDA #0
+	STA <PPUCLEN
+	LDA #4
+	STA <PPUCLEN+1
+	LDA #LOW(DBGPALS)
+	STA <PPUCINPUT
+	LDA #HIGH(DBGPALS)
+	STA <PPUCINPUT+1
+	JSR PPUCOPY		; Load palettes into PPU
+
+	LDA #$20
+	STA <PPUCADDR
+	LDA #$41
+	STA <PPUCADDR+1
+	LDA #0
+	STA <PPUCLEN
+	LDA #13
+	STA <PPUCLEN+1
+	LDA #LOW(DBGTEXT1)
+	STA <PPUCINPUT
+	LDA #HIGH(DBGTEXT1)
+	STA <PPUCINPUT+1
+	JSR PPUCOPY		; Load debug text 1 into PPU
+	LDA #1
+	STA <PRINTB
+	JSR PRINTBYTE
+
+	LDA #$20
+	STA <PPUCADDR
+	LDA #$61
+	STA <PPUCADDR+1
+	LDA #0
+	STA <PPUCLEN
+	LDA #3
+	STA <PPUCLEN+1
+	LDA #LOW(DBGTEXT2)
+	STA <PPUCINPUT
+	LDA #HIGH(DBGTEXT2)
+	STA <PPUCINPUT+1
+	JSR PPUCOPY		; Load debug text 2 into PPU
+	LDA #2
+	STA <PRINTB
+	JSR PRINTBYTE
+
+	LDA #$20
+	STA <PPUCADDR
+	LDA #$69
+	STA <PPUCADDR+1
+	LDA #0
+	STA <PPUCLEN
+	LDA #3
+	STA <PPUCLEN+1
+	LDA #LOW(DBGTEXT3)
+	STA <PPUCINPUT
+	LDA #HIGH(DBGTEXT3)
+	STA <PPUCINPUT+1
+	JSR PPUCOPY		; Load debug text 3 into PPU
+	LDA #3
+	STA <PRINTB
+	JSR PRINTBYTE
+
+	LDA #$20
+	STA <PPUCADDR
+	LDA #$71
+	STA <PPUCADDR+1
+	LDA #0
+	STA <PPUCLEN
+	LDA #3
+	STA <PPUCLEN+1
+	LDA #LOW(DBGTEXT4)
+	STA <PPUCINPUT
+	LDA #HIGH(DBGTEXT4)
+	STA <PPUCINPUT+1
+	JSR PPUCOPY		; Load debug text 4 into PPU
+	LDA #4
+	STA <PRINTB
+	JSR PRINTBYTE
+
+	LDA #$20
+	STA <PPUCADDR
+	LDA #$81
+	STA <PPUCADDR+1
+	LDA #0
+	STA <PPUCLEN
+	LDA #4
+	STA <PPUCLEN+1
+	LDA #LOW(DBGTEXT5)
+	STA <PPUCINPUT
+	LDA #HIGH(DBGTEXT5)
+	STA <PPUCINPUT+1
+	JSR PPUCOPY		; Load debug text 5 into PPU
+	LDA #5
+	STA <PRINTB
+	JSR PRINTBYTE
+
+	LDA #$20
+	STA <PPUCADDR
+	LDA #$89
+	STA <PPUCADDR+1
+	LDA #0
+	STA <PPUCLEN
+	LDA #4
+	STA <PPUCLEN+1
+	LDA #LOW(DBGTEXT6)
+	STA <PPUCINPUT
+	LDA #HIGH(DBGTEXT6)
+	STA <PPUCINPUT+1
+	JSR PPUCOPY		; Load debug text 6 into PPU
+	LDA #6
+	STA <PRINTB
+	JSR PRINTBYTE
+
+	LDA #%00000000
+	STA <NT			; Select nametable 0
+	JSR UPDATE2000
+
+	JSR VBWAIT
+.LOOP:
+	JMP .LOOP		; Infinite loop
+
+PRINTBYTE:
+	;; TODO - Optimize this subroutine for size
+	LDA <PRINTB
+	CMP #1
+	BNE .P2
+
+	LDA <DBGPC
+	AND #%11110000
+	STA <PBTEMP1
+	LSR <PBTEMP1
+	LSR <PBTEMP1
+	LSR <PBTEMP1
+	LSR <PBTEMP1
+	LDA <PBTEMP1
+	CMP #10
+	BCS .A1
+	CLC
+	ADC #$30
+	JMP .N1
+.A1:
+	CLC
+	ADC #$37
+.N1:
+	STA PPUDATA
+
+	LDA <DBGPC
+	AND #%00001111
+	CMP #10
+	BCS .A2
+	CLC
+	ADC #$30
+	JMP .N2
+.A2:
+	CLC
+	ADC #$37
+.N2:
+	STA PPUDATA
+
+	LDA <DBGPC+1
+	AND #%11110000
+	STA <PBTEMP1
+	LSR <PBTEMP1
+	LSR <PBTEMP1
+	LSR <PBTEMP1
+	LSR <PBTEMP1
+	LDA <PBTEMP1
+	CMP #10
+	BCS .A3
+	CLC
+	ADC #$30
+	JMP .N3
+.A3:
+	CLC
+	ADC #$37
+.N3:
+	STA PPUDATA
+
+	LDA <DBGPC+1
+	AND #%00001111
+	CMP #10
+	BCS .A4
+	CLC
+	ADC #$30
+	JMP .N4
+.A4:
+	CLC
+	ADC #$37
+.N4:
+	STA PPUDATA
+
+	JMP .OUT
+.P2:
+	LDA <PRINTB
+	CMP #2
+	BNE .P3
+
+	LDA <DBGA
+	AND #%11110000
+	STA <PBTEMP1
+	LSR <PBTEMP1
+	LSR <PBTEMP1
+	LSR <PBTEMP1
+	LSR <PBTEMP1
+	LDA <PBTEMP1
+	CMP #10
+	BCS .A5
+	CLC
+	ADC #$30
+	JMP .N5
+.A5:
+	CLC
+	ADC #$37
+.N5:
+	STA PPUDATA
+
+	LDA <DBGA
+	AND #%00001111
+	CMP #10
+	BCS .A6
+	CLC
+	ADC #$30
+	JMP .N6
+.A6:
+	CLC
+	ADC #$37
+.N6:
+	STA PPUDATA
+
+	JMP .OUT
+.P3:
+	LDA <PRINTB
+	CMP #3
+	BNE .P4
+
+	LDA <DBGX
+	AND #%11110000
+	STA <PBTEMP1
+	LSR <PBTEMP1
+	LSR <PBTEMP1
+	LSR <PBTEMP1
+	LSR <PBTEMP1
+	LDA <PBTEMP1
+	CMP #10
+	BCS .A7
+	CLC
+	ADC #$30
+	JMP .N7
+.A7:
+	CLC
+	ADC #$37
+.N7:
+	STA PPUDATA
+
+	LDA <DBGX
+	AND #%00001111
+	CMP #10
+	BCS .A8
+	CLC
+	ADC #$30
+	JMP .N8
+.A8:
+	CLC
+	ADC #$37
+.N8:
+	STA PPUDATA
+
+	JMP .OUT
+.P4:
+	LDA <PRINTB
+	CMP #4
+	BNE .P5
+
+	LDA <DBGY
+	AND #%11110000
+	STA <PBTEMP1
+	LSR <PBTEMP1
+	LSR <PBTEMP1
+	LSR <PBTEMP1
+	LSR <PBTEMP1
+	LDA <PBTEMP1
+	CMP #10
+	BCS .A9
+	CLC
+	ADC #$30
+	JMP .N9
+.A9:
+	CLC
+	ADC #$37
+.N9:
+	STA PPUDATA
+
+	LDA <DBGY
+	AND #%00001111
+	CMP #10
+	BCS .A10
+	CLC
+	ADC #$30
+	JMP .N10
+.A10:
+	CLC
+	ADC #$37
+.N10:
+	STA PPUDATA
+
+	JMP .OUT
+.P5:
+	LDA <PRINTB
+	CMP #5
+	BNE .P6
+
+	LDA <DBGSP
+	AND #%11110000
+	STA <PBTEMP1
+	LSR <PBTEMP1
+	LSR <PBTEMP1
+	LSR <PBTEMP1
+	LSR <PBTEMP1
+	LDA <PBTEMP1
+	CMP #10
+	BCS .A11
+	CLC
+	ADC #$30
+	JMP .N11
+.A11:
+	CLC
+	ADC #$37
+.N11:
+	STA PPUDATA
+
+	LDA <DBGSP
+	AND #%00001111
+	CMP #10
+	BCS .A12
+	CLC
+	ADC #$30
+	JMP .N12
+.A12:
+	CLC
+	ADC #$37
+.N12:
+	STA PPUDATA
+
+	JMP .OUT
+.P6:
+	LDA <PRINTB
+	CMP #6
+	BNE .OUT
+
+	LDA <DBGPS
+	AND #%11110000
+	STA <PBTEMP1
+	LSR <PBTEMP1
+	LSR <PBTEMP1
+	LSR <PBTEMP1
+	LSR <PBTEMP1
+	LDA <PBTEMP1
+	CMP #10
+	BCS .A13
+	CLC
+	ADC #$30
+	JMP .N13
+.A13:
+	CLC
+	ADC #$37
+.N13:
+	STA PPUDATA
+
+	LDA <DBGPS
+	AND #%00001111
+	CMP #10
+	BCS .A14
+	CLC
+	ADC #$30
+	JMP .N14
+.A14:
+	CLC
+	ADC #$37
+.N14:
+	STA PPUDATA
+
+.OUT:
+	JSR VBWAIT
+	RTS
+	.endif
+
 ;;;;;;;;;;
 
 	.code
@@ -572,26 +1007,11 @@ IRQ:
 	PHA			; Return processor status to the stack
 	AND #%00010000		; Check for "B flag"
 	BEQ .NOBRK		; Branch if not set
-	STX <DBGX		; Stash X register
-	STY <DBGY		; Stash Y register
-	TSX
-	STX <DBGSP		; Stash stack pointer
-	PLA			; Pull processor status from the stack
-	STA <DBGPS		; Stash processor status
-	PLA
-	STA <DBGPC+1
-	PLA			; Pull program counter from the stack
-	STA <DBGPC		; Stash program counter
-	DEC <DBGPC+1
-	DEC <DBGPC+1		; Return program counter to address that caused the BRK
-	;; TODO - display crash report on screen
-.LOOP:
-	JMP .LOOP		; Infinite loop
+	JMP BREAK		; Jump to break handler
 .NOBRK:
 	LDA <DBGA		; Restore accumulator
-	.else
-	;; TODO - sound code IRQ
 	.endif
+	;; TODO - sound code IRQ
 
 	RTI			; Exit IRQ
 
