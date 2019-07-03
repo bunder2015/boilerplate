@@ -89,6 +89,10 @@ PRINTB:
 	.bank 0
 	.org $C000
 
+	.ifdef DEBUG
+	BRK			; Catch runaway execution
+	.endif
+
 MAIN:
 	JSR RENDERDIS		; Disable rendering to load PPU
 
@@ -185,8 +189,6 @@ MAIN:
 	LDA #%00000001
 	STA SPR1ATTR		; Draw a basic cursor sprite
 
-	LDA #%10000000
-	STA <NMIEN		; Enable NMI
 	LDA #%00000000
 	STA <BGPT		; Select BG pattern table 0
 	LDA #%00001000
@@ -234,7 +236,9 @@ MAIN:
 	JSR VBWAIT		; Wait for next vblank
 	JMP .MENULOOP
 
-;;;;;;;;;;
+	.ifdef DEBUG
+	BRK			; Catch runaway execution
+	.endif
 
 OPTIONS:
 	JSR RENDERDIS		; Disable rendering to load PPU
@@ -258,15 +262,15 @@ OPTIONS:
 	JSR VBWAIT		; Wait for next vblank
 	JMP .OPTIONSLOOP
 
-;;;;;;;;;;
+	.ifdef DEBUG
+	BRK			; Catch runaway execution
+	.endif
 
 NEWGAME:
 	JSR RENDERDIS		; Disable rendering to load PPU
 
 	;; TODO - Display new game start
 
-	LDA #%10000000
-	STA <NMIEN		; Enable NMI
 	LDA #%00000000
 	STA <BGPT		; Select BG pattern table 0
 	LDA #%00001000
@@ -283,6 +287,10 @@ NEWGAME:
 .DONE:
 	JSR VBWAIT		; Wait for next vblank
 	JMP .STARTLOOP
+
+	.ifdef DEBUG
+	BRK			; Catch runaway execution
+	.endif
 
 ;;;;;;;;;;
 
@@ -364,7 +372,9 @@ DBGTEXT6:
 	.bank 1
 	.org $E000
 
-	;; TODO
+	.ifdef DEBUG
+	BRK			; Catch runaway execution
+	.endif
 
 CLEARSCREEN:
 	JSR RENDERDIS		; Disable rendering
@@ -415,6 +425,10 @@ CLEARSCREEN:
 
 	RTS
 
+	.ifdef DEBUG
+	BRK			; Catch runaway execution
+	.endif
+
 CLEARSPR:
 	LDA #$FF		; FF moves the sprites off the screen
 	LDX #$00
@@ -424,6 +438,10 @@ CLEARSPR:
 	BNE .L1
 
 	RTS
+
+	.ifdef DEBUG
+	BRK			; Catch runaway execution
+	.endif
 
 PPUCOPY:
 	LDA PPUSTATUS		; Read PPUSTATUS to reset PPUADDR latch
@@ -449,6 +467,10 @@ PPUCOPY:
 
 	RTS
 
+	.ifdef DEBUG
+	BRK			; Catch runaway execution
+	.endif
+
 READJOYS:
 	LDA #$01
 	STA STROBE		; Bring strobe latch high
@@ -468,11 +490,19 @@ READJOYS:
 
 	RTS
 
+	.ifdef DEBUG
+	BRK			; Catch runaway execution
+	.endif
+
 RENDERDIS:
 	LDA #$00000000
 	STA PPUMASK		; Disable BG and SPR
 
 	RTS
+
+	.ifdef DEBUG
+	BRK			; Catch runaway execution
+	.endif
 
 RENDEREN:
 	LDA #%00011110
@@ -480,12 +510,20 @@ RENDEREN:
 
 	RTS
 
+	.ifdef DEBUG
+	BRK			; Catch runaway execution
+	.endif
+
 RESETSCR:
 	LDA #$00
 	STA PPUSCROLL
 	STA PPUSCROLL		; Reset PPU scrolling to top left corner
 
 	RTS
+
+	.ifdef DEBUG
+	BRK			; Catch runaway execution
+	.endif
 
 UPDATE2000:
 	LDA #%00000000
@@ -497,6 +535,10 @@ UPDATE2000:
 	STA PPUCTRL		; Write update byte to PPU
 
 	RTS
+
+	.ifdef DEBUG
+	BRK			; Catch runaway execution
+	.endif
 
 VBWAIT:
 	INC <NMIREADY		; Store waiting status
@@ -511,6 +553,7 @@ VBWAIT:
 	RTS
 
 	.ifdef DEBUG
+	BRK			; Catch runaway execution
 BREAK:
 	STY <DBGY		; Stash Y register
 	TSX
@@ -958,7 +1001,9 @@ NMI:
 
 	RTI			; Exit NMI
 
-;;;;;;;;;;
+	.ifdef DEBUG
+	BRK			; Catch runaway execution
+	.endif
 
 RESET:
 	SEI			; Disable IRQ
@@ -996,9 +1041,15 @@ RESET:
 	BPL .VB2		; Wait for second vblank
 
 .RESETDONE:
+	LDA #%10000000
+	STA <NMIEN		; Enable NMI
+	JSR UPDATE2000
+	JSR CLEARSCREEN		; Clear the screen
 	JMP MAIN		; Go to main code loop
 
-;;;;;;;;;;
+	.ifdef DEBUG
+	BRK			; Catch runaway execution
+	.endif
 
 IRQ:
 	.ifdef DEBUG
@@ -1014,6 +1065,10 @@ IRQ:
 	;; TODO - sound code IRQ
 
 	RTI			; Exit IRQ
+
+	.ifdef DEBUG
+	BRK			; Catch runaway execution
+	.endif
 
 ;;;;;;;;;;
 
