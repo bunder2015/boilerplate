@@ -1,6 +1,6 @@
 ;;;;;;;;;;
 ;
-; ppu-bss.asm - a list of PPU OAM slots for bss reservation
+; bss-ppu-oam.asm - a list of PPU OAM slots for bss reservation
 ;
 ;;;;;;;;;;
 
