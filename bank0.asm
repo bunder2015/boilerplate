@@ -12,7 +12,7 @@
 	BRK			; Catch runaway execution
 	.endif
 
-MAIN:
+MAINMENU:
 	JSR RENDERDIS		; Disable rendering to load PPU
 
 	LDA #$3F
@@ -159,32 +159,6 @@ MAIN:
 	BRK			; Catch runaway execution
 	.endif
 
-OPTIONS:
-	JSR RENDERDIS		; Disable rendering to load PPU
-
-	;; TODO - Display options menu
-
-	LDA #%00000000
-	STA <BGPT		; Select BG pattern table 0
-	LDA #%00001000
-	STA <SPRPT		; Select sprite pattern table 1
-	LDA #%00000001
-	STA <NT			; Select nametable 1
-	JSR UPDATE2000		; Update PPU controls
-
-	JSR VBWAIT		; Wait for next vblank
-
-.OPTIONSLOOP:
-	;; TODO - Input
-
-.DONE:
-	JSR VBWAIT		; Wait for next vblank
-	JMP .OPTIONSLOOP
-
-	.ifdef DEBUG
-	BRK			; Catch runaway execution
-	.endif
-
 NEWGAME:
 	JSR RENDERDIS		; Disable rendering to load PPU
 
@@ -206,6 +180,32 @@ NEWGAME:
 .DONE:
 	JSR VBWAIT		; Wait for next vblank
 	JMP .STARTLOOP
+
+	.ifdef DEBUG
+	BRK			; Catch runaway execution
+	.endif
+
+OPTIONS:
+	JSR RENDERDIS		; Disable rendering to load PPU
+
+	;; TODO - Display options menu
+
+	LDA #%00000000
+	STA <BGPT		; Select BG pattern table 0
+	LDA #%00001000
+	STA <SPRPT		; Select sprite pattern table 1
+	LDA #%00000001
+	STA <NT			; Select nametable 1
+	JSR UPDATE2000		; Update PPU controls
+
+	JSR VBWAIT		; Wait for next vblank
+
+.OPTIONSLOOP:
+	;; TODO - Input
+
+.DONE:
+	JSR VBWAIT		; Wait for next vblank
+	JMP .OPTIONSLOOP
 
 	.ifdef DEBUG
 	BRK			; Catch runaway execution

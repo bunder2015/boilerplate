@@ -681,7 +681,7 @@ RESET:
 	STA <NMIEN		; Enable NMI
 	JSR UPDATE2000
 	JSR CLEARSCREEN		; Clear the screen
-	JMP MAIN		; Go to main code loop
+	JMP MAINMENU		; Go to main menu
 
 	.ifdef DEBUG
 	BRK			; Catch runaway execution
