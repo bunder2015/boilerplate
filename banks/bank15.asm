@@ -1,195 +1,11 @@
-;;;;;;;;;;
-;
-;  bank1.asm - $E000-$FFF0 (8k)
-;
-;;;;;;;;;;
-
 	.code
-	.bank 1
-	.org $E000
+	.bank 30
+	.org $C000
 
 	.ifdef DEBUG
 	BRK			; Catch runaway execution
-	.endif
+	.db "15A"
 
-CLEARSCREEN:
-	JSR RENDERDIS		; Disable rendering
-
-	LDA PPUSTATUS		; Read PPUSTATUS to reset PPUADDR latch
-	LDA #$20
-	STA PPUADDR
-	LDA #$00
-	STA PPUADDR
-	LDA #$08
-	STA <PPUCLEN
-	LDA #$00
-	STA <PPUCLEN+1
-
-	LDA #$00
-	LDX #$FF
-	LDY #$00
-.L1:
-	STA PPUDATA		; Clear nametable 0 and 1 and attributes
-	INY
-	CPY <PPUCLEN+1
-	BNE .L1
-	LDY #$00
-	INX
-	CPX <PPUCLEN
-	BNE .L1
-
-	LDA PPUSTATUS
-	LDA #$3F
-	STA PPUADDR
-	LDA #$00
-	STA PPUADDR
-	LDA #32
-	STA <PPUCLEN+1
-
-	LDA #$0F		; 0F sets the palette colours to all black
-	LDY #$00
-.L2:
-	STA PPUDATA		; Clear palette table
-	INY
-	CPY <PPUCLEN+1
-	BNE .L2
-
-	JSR CLEARSPR		; Clear sprites from screen
-	JSR RESETSCR		; Reset PPU scrolling
-	JSR UPDATE2000		; Update PPU controls
-	JSR VBWAIT		; Wait for next vblank
-
-	RTS
-
-	.ifdef DEBUG
-	BRK			; Catch runaway execution
-	.endif
-
-CLEARSPR:
-	LDA #$FF		; FF moves the sprites off the screen
-	LDX #$00
-.L1:
-	STA $0200, X		; Remove all sprites from screen
-	INX
-	BNE .L1
-
-	RTS
-
-	.ifdef DEBUG
-	BRK			; Catch runaway execution
-	.endif
-
-PPUCOPY:
-	LDA PPUSTATUS		; Read PPUSTATUS to reset PPUADDR latch
-	LDA <PPUCADDR
-	STA PPUADDR
-	LDA <PPUCADDR+1
-	STA PPUADDR		; Read address and set PPUADDR
-
-	LDX #$FF
-	LDY #$00		; Set loop counters
-.L1:
-	LDA [PPUCINPUT], Y	; Load data
-	STA PPUDATA		; Store to PPU
-	INY
-	CPY <PPUCLEN+1
-	BNE .L1
-	LDY #$00
-	INX
-	CPX <PPUCLEN		; Check to see if we have finished copying
-	BNE .L1			; Loop if we have not finished copying
-
-	JSR RESETSCR		; Reset PPU scrolling
-
-	RTS
-
-	.ifdef DEBUG
-	BRK			; Catch runaway execution
-	.endif
-
-READJOYS:
-	LDA #$01
-	STA STROBE		; Bring strobe latch high
-	LDA #$00
-	STA STROBE		; Bring strobe latch low
-
-	LDX #8			; Set loop counter
-.L1:
-	LDA JOY1		; Read Joypad 1
-	LSR A			; Shift bit into carry
-	ROL <JOY1IN		; Rotate carry into storage
-	LDA JOY2		; Read Joypad 2
-	LSR A			; Shift bit into carry
-	ROL <JOY2IN		; Rotate carry into storage
-	DEX
-	BNE .L1			; Loop through 8 joypad buttons
-
-	RTS
-
-	.ifdef DEBUG
-	BRK			; Catch runaway execution
-	.endif
-
-RENDERDIS:
-	LDA #$00000000
-	STA PPUMASK		; Disable BG and SPR
-
-	RTS
-
-	.ifdef DEBUG
-	BRK			; Catch runaway execution
-	.endif
-
-RENDEREN:
-	LDA #%00011110
-	STA PPUMASK		; Enable BG and SPR
-
-	RTS
-
-	.ifdef DEBUG
-	BRK			; Catch runaway execution
-	.endif
-
-RESETSCR:
-	LDA #$00
-	STA PPUSCROLL
-	STA PPUSCROLL		; Reset PPU scrolling to top left corner
-
-	RTS
-
-	.ifdef DEBUG
-	BRK			; Catch runaway execution
-	.endif
-
-UPDATE2000:
-	LDA #%00000000
-	ORA <NMIEN		; Add NMI toggle to status update
-	ORA <BGPT
-	ORA <SPRPT		; Add pattern table selectons to status update
-	ORA <NT			; Add nametable selection to status update
-	LDX PPUSTATUS		; Read PPUSTATUS to clear vblank
-	STA PPUCTRL		; Write update byte to PPU
-
-	RTS
-
-	.ifdef DEBUG
-	BRK			; Catch runaway execution
-	.endif
-
-VBWAIT:
-	INC <NMIREADY		; Store waiting status
-.L1:
-	LDA <NMIREADY		; Load waiting status
-	BNE .L1			; Loop if still waiting
-	LDX <WAITFRAMES
-	BEQ .OUT		; Loop if we need to wait more frames
-	INC <NMIREADY
-	JMP .L1
-.OUT:
-	RTS
-
-	.ifdef DEBUG
-	BRK			; Catch runaway execution
 BREAK:
 	STY <DBGY		; Stash Y register
 	TSX
@@ -597,12 +413,250 @@ PRINTBYTE:
 .OUT:
 	JSR VBWAIT
 	RTS
+
+DBGATTR:
+	.db $55,$55,$55,$55,$55,$55,$55,$55	; Top 2 rows of screen
+	.db $55,$55,$55,$55,$55,$55,$55,$55	; Second 2 rows of screen
+	.db $55,$55,$55,$55,$55,$55,$55,$55	; Third 2 rows of screen
+	.db $55,$55,$55,$55,$55,$55,$55,$55	; Fourth 2 rows of screen
+	.db $55,$55,$55,$55,$55,$55,$55,$55	; Fifth 2 rows of screen
+	.db $55,$55,$55,$55,$55,$55,$55,$55	; Sixth 2 rows of screen
+	.db $55,$55,$55,$55,$55,$55,$55,$55	; Seventh 2 rows of screen
+	.db $05,$05,$05,$05,$05,$05,$05,$05	; Last row of screen (lower nibbles)
+
+DBGPALS:
+	.db $01,$20,$10,$00	; BG palette 0
+
+DBGTEXT1:
+	.db "BREAK AT PC: "
+DBGTEXT2:
+	.db "A: "
+DBGTEXT3:
+	.db "X: "
+DBGTEXT4:
+	.db "Y: "
+DBGTEXT5:
+	.db "SP: "
+DBGTEXT6:
+	.db "PS: "
+
+	.endif
+
+	.code
+	.bank 31
+	.org $E000
+
+	.ifdef DEBUG
+	BRK			; Catch runaway execution
+	.db "15B"
+	.endif
+
+CHANGEMMCPRG:
+	LDA <MMCRAM		; Read PRG RAM toggle
+	ASL A
+	ASL A
+	ASL A
+	ASL A
+	ORA <MMCPRG		; Read PRG ROM bank
+	STA $E000
+	LSR A
+	STA $E000
+	LSR A
+	STA $E000
+	LSR A
+	STA $E000
+	LSR A
+	STA $E000		; Change the PRG ROM+RAM settings
+	RTS
+
+	.ifdef DEBUG
+	BRK			; Catch runaway execution
+	.endif
+
+CLEARSCREEN:
+	JSR RENDERDIS		; Disable rendering
+
+	LDA PPUSTATUS		; Read PPUSTATUS to reset PPUADDR latch
+	LDA #$20
+	STA PPUADDR
+	LDA #$00
+	STA PPUADDR
+	LDA #$08
+	STA <PPUCLEN
+	LDA #$00
+	STA <PPUCLEN+1
+
+	LDA #$00
+	LDX #$FF
+	LDY #$00
+.L1:
+	STA PPUDATA		; Clear nametable 0 and 1 and attributes
+	INY
+	CPY <PPUCLEN+1
+	BNE .L1
+	LDY #$00
+	INX
+	CPX <PPUCLEN
+	BNE .L1
+
+	LDA PPUSTATUS
+	LDA #$3F
+	STA PPUADDR
+	LDA #$00
+	STA PPUADDR
+	LDA #32
+	STA <PPUCLEN+1
+
+	LDA #$0F		; 0F sets the palette colours to all black
+	LDY #$00
+.L2:
+	STA PPUDATA		; Clear palette table
+	INY
+	CPY <PPUCLEN+1
+	BNE .L2
+
+	JSR CLEARSPR		; Clear sprites from screen
+	JSR RESETSCR		; Reset PPU scrolling
+	JSR UPDATE2000		; Update PPU controls
+	JSR VBWAIT		; Wait for next vblank
+
+	RTS
+
+	.ifdef DEBUG
+	BRK			; Catch runaway execution
+	.endif
+
+CLEARSPR:
+	LDA #$FF		; FF moves the sprites off the screen
+	LDX #$00
+.L1:
+	STA $0200, X		; Remove all sprites from screen
+	INX
+	BNE .L1
+
+	RTS
+
+	.ifdef DEBUG
+	BRK			; Catch runaway execution
+	.endif
+
+PPUCOPY:
+	LDA PPUSTATUS		; Read PPUSTATUS to reset PPUADDR latch
+	LDA <PPUCADDR
+	STA PPUADDR
+	LDA <PPUCADDR+1
+	STA PPUADDR		; Read address and set PPUADDR
+
+	LDX #$FF
+	LDY #$00		; Set loop counters
+.L1:
+	LDA [PPUCINPUT], Y	; Load data
+	STA PPUDATA		; Store to PPU
+	INY
+	CPY <PPUCLEN+1
+	BNE .L1
+	LDY #$00
+	INX
+	CPX <PPUCLEN		; Check to see if we have finished copying
+	BNE .L1			; Loop if we have not finished copying
+
+	JSR RESETSCR		; Reset PPU scrolling
+
+	RTS
+
+	.ifdef DEBUG
+	BRK			; Catch runaway execution
+	.endif
+
+READJOYS:
+	LDA #$01
+	STA STROBE		; Bring strobe latch high
+	LDA #$00
+	STA STROBE		; Bring strobe latch low
+
+	LDX #8			; Set loop counter
+.L1:
+	LDA JOY1		; Read Joypad 1
+	LSR A			; Shift bit into carry
+	ROL <JOY1IN		; Rotate carry into storage
+	LDA JOY2		; Read Joypad 2
+	LSR A			; Shift bit into carry
+	ROL <JOY2IN		; Rotate carry into storage
+	DEX
+	BNE .L1			; Loop through 8 joypad buttons
+
+	RTS
+
+	.ifdef DEBUG
+	BRK			; Catch runaway execution
+	.endif
+
+RENDERDIS:
+	LDA #$00000000
+	STA PPUMASK		; Disable BG and SPR
+
+	RTS
+
+	.ifdef DEBUG
+	BRK			; Catch runaway execution
+	.endif
+
+RENDEREN:
+	LDA #%00011110
+	STA PPUMASK		; Enable BG and SPR
+
+	RTS
+
+	.ifdef DEBUG
+	BRK			; Catch runaway execution
+	.endif
+
+RESETSCR:
+	LDA #$00
+	STA PPUSCROLL
+	STA PPUSCROLL		; Reset PPU scrolling to top left corner
+
+	RTS
+
+	.ifdef DEBUG
+	BRK			; Catch runaway execution
+	.endif
+
+UPDATE2000:
+	LDA #%00000000
+	ORA <NMIEN		; Add NMI toggle to status update
+	ORA <BGPT
+	ORA <SPRPT		; Add pattern table selectons to status update
+	ORA <NT			; Add nametable selection to status update
+	LDX PPUSTATUS		; Read PPUSTATUS to clear vblank
+	STA PPUCTRL		; Write update byte to PPU
+
+	RTS
+
+	.ifdef DEBUG
+	BRK			; Catch runaway execution
+	.endif
+
+VBWAIT:
+	INC <NMIREADY		; Store waiting status
+.L1:
+	LDA <NMIREADY		; Load waiting status
+	BNE .L1			; Loop if still waiting
+	LDX <WAITFRAMES
+	BEQ .OUT		; Loop if we need to wait more frames
+	INC <NMIREADY
+	JMP .L1
+.OUT:
+	RTS
+
+	.ifdef DEBUG
+	BRK			; Catch runaway execution
 	.endif
 
 ;;;;;;;;;;
 
 	.code
-	.bank 1
+	.bank 31
 	.org $FF00
 
 NMI:
@@ -676,6 +730,23 @@ RESET:
 	BIT PPUSTATUS
 	BPL .VB2		; Wait for second vblank
 
+.MMC1INIT:
+	LDA #%00001110		; Vertical mirroring, bank 15 fixed at $C000, 8kb CHR ROM banks
+	STA $8000
+	LSR A
+	STA $8000
+	LSR A
+	STA $8000
+	LSR A
+	STA $8000
+	LSR A
+	STA $8000
+
+	LDA #0
+	STA <MMCPRG		; Bank 0 selected at $8000
+	STA <MMCRAM		; PRG RAM disabled
+	JSR CHANGEMMCPRG
+
 .RESETDONE:
 	LDA #%10000000
 	STA <NMIEN		; Enable NMI
@@ -705,3 +776,18 @@ IRQ:
 	.ifdef DEBUG
 	BRK			; Catch runaway execution
 	.endif
+
+	.code
+	.bank 31
+	.org $FFF0
+
+RESET_MMC15:
+	SEI
+	LDX #$FF
+	TXS
+	STX $8000
+	JMP RESET
+
+	.dw NMI
+	.dw RESET_MMC15
+	.dw IRQ

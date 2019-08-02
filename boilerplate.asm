@@ -11,20 +11,20 @@ DEBUG				; Comment this line to disable debugging
 	.endif
 
 	; iNES header
-	.inesprg 1		; 1x16k PRG ROM
-	.ineschr 1		; 1x 8k CHR ROM
-	.inesprs 0		; 0x 8k PRG RAM
-	.inesmap 0		; iNES mapper 0
-	.inesmir 1		; Vertical mirroring (horizontal scrolling)
+	.inesprg 16		; 16x16k PRG ROM (256k)
+	.ineschr 16		; 16x 8k CHR ROM (128k)
+	.inesprs 1		; 1 x 8k PRG RAM
+	.inesmap 1		; iNES mapper 1 (MMC1)
+	.inesmir 0		; Horizontal mirroring (ignored, configured with MMC1)
 	.inesfsm 0		; No four-screen mirroring
-	.inesbat 0		; No battery
+	.inesbat 1		; PRG RAM save battery
 	.inesreg 0		; NTSC region
 	.inesbus 0		; No bus conflicts
 
 ;;;;;;;;;;
 
 	; NES CPU register constants
-	.include "registers.asm"
+	.include "./include/registers.asm"
 
 ;;;;;;;;;;
 
@@ -37,6 +37,10 @@ JOY1IN:
 	.ds 1			; Joypad 1 input
 JOY2IN:
 	.ds 1			; Joypad 2 input
+MMCPRG:
+	.ds 1			; MMC1 selectable PRG ROM bank
+MMCRAM:
+	.ds 1			; MMC1 PRG RAM enable flag
 NMIEN:
 	.ds 1			; NMI enable
 NMIREADY:
@@ -80,34 +84,43 @@ PRINTB:
 	.bss
 
 	; Reserve first 256b chunk of WRAM for PPU OAM
-	.include "bss-ppu-oam.asm"
+	.include "./include/bss-ppu-oam.asm"
+
+;;;;;;;;;;
+
+	; Cartridge memory $6000-7FFF
+	.sram
+
+TEMPVAR:
+	.ds 1			; Added for testing
 
 ;;;;;;;;;;
 
 	; PRG ROM
-	.include "bank0.asm"
-	.include "bank1.asm"
-
-;;;;;;;;;;
-
-	; CPU Vectors
-	.data
-	.bank 1
-	.org $FFFA
-
-	.dw NMI
-	.dw RESET
-	.dw IRQ
-
-	; End of PRG ROM
+	.include "./banks/bank0.asm"
+	.include "./banks/bank1.asm"
+	.include "./banks/bank2.asm"
+	.include "./banks/bank3.asm"
+	.include "./banks/bank4.asm"
+	.include "./banks/bank5.asm"
+	.include "./banks/bank6.asm"
+	.include "./banks/bank7.asm"
+	.include "./banks/bank8.asm"
+	.include "./banks/bank9.asm"
+	.include "./banks/bank10.asm"
+	.include "./banks/bank11.asm"
+	.include "./banks/bank12.asm"
+	.include "./banks/bank13.asm"
+	.include "./banks/bank14.asm"
+	.include "./banks/bank15.asm"
 
 ;;;;;;;;;;
 
 	; CHR ROM
 	.data
-	.bank 2
+	.bank 32
 	.org $0000
 
-	.incbin "bank2.chr"
+	.incbin "./banks/bank16.chr"
 
 	; End of CHR ROM

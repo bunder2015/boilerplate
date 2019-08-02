@@ -1,15 +1,10 @@
-;;;;;;;;;;
-;
-;  bank0.asm - $C000-$DFFF (8k)
-;
-;;;;;;;;;;
-
 	.code
 	.bank 0
-	.org $C000
+	.org $8000
 
 	.ifdef DEBUG
 	BRK			; Catch runaway execution
+	.db "00A"
 	.endif
 
 MAINMENU:
@@ -176,6 +171,7 @@ NEWGAME:
 
 .STARTLOOP:
 	;; TODO - Input
+	BRK
 
 .DONE:
 	JSR VBWAIT		; Wait for next vblank
@@ -202,6 +198,7 @@ OPTIONS:
 
 .OPTIONSLOOP:
 	;; TODO - Input
+	BRK
 
 .DONE:
 	JSR VBWAIT		; Wait for next vblank
@@ -211,18 +208,22 @@ OPTIONS:
 	BRK			; Catch runaway execution
 	.endif
 
-;;;;;;;;;;
 
-	.data
-	.bank 0
-	.org $D000
+	.code
+	.bank 1
+	.org $A000
+
+	.ifdef DEBUG
+	BRK			; Catch runaway execution
+	.db "00B"
+	.endif
 
 MENUATTR:
 	.db $00,$00,$00,$00,$00,$00,$00,$00	; Top 2 rows of screen
 	.db $00,$00,$00,$00,$00,$00,$00,$00	; Second 2 rows of screen
-	.db $00,$55,$55,$55,$55,$55,$55,$00	; Third 2 rows of screen
-	.db $00,$55,$55,$55,$55,$55,$55,$00	; Fourth 2 rows of screen
-	.db $00,$00,$00,$FF,$FF,$FF,$00,$00	; Fifth 2 rows of screen
+	.db $00,$00,$55,$55,$55,$55,$55,$00	; Third 2 rows of screen
+	.db $00,$00,$05,$05,$05,$05,$05,$00	; Fourth 2 rows of screen
+	.db $00,$00,$00,$F0,$F0,$30,$00,$00	; Fifth 2 rows of screen
 	.db $00,$00,$00,$00,$00,$00,$00,$00	; Sixth 2 rows of screen
 	.db $00,$00,$00,$00,$00,$00,$00,$00	; Seventh 2 rows of screen
 	.db $00,$00,$00,$00,$00,$00,$00,$00	; Last row of screen (lower nibbles)
@@ -257,31 +258,17 @@ MENUTEXT1:
 MENUTEXT2:
 	.db "Options"
 
-	.ifdef DEBUG
-DBGATTR:
-	.db $55,$55,$55,$55,$55,$55,$55,$55	; Top 2 rows of screen
-	.db $55,$55,$55,$55,$55,$55,$55,$55	; Second 2 rows of screen
-	.db $55,$55,$55,$55,$55,$55,$55,$55	; Third 2 rows of screen
-	.db $55,$55,$55,$55,$55,$55,$55,$55	; Fourth 2 rows of screen
-	.db $55,$55,$55,$55,$55,$55,$55,$55	; Fifth 2 rows of screen
-	.db $55,$55,$55,$55,$55,$55,$55,$55	; Sixth 2 rows of screen
-	.db $55,$55,$55,$55,$55,$55,$55,$55	; Seventh 2 rows of screen
-	.db $05,$05,$05,$05,$05,$05,$05,$05	; Last row of screen (lower nibbles)
+        .code
+        .bank 1
+        .org $BFF0
 
-DBGPALS:
-	.db $01,$20,$10,$00	; BG palette 0
+RESET_MMC0:
+        SEI
+        LDX #$FF
+        TXS
+        STX $8000
+        JMP RESET		; This should never happen, but lets pad the bytes
 
-DBGTEXT1:
-	.db "BREAK AT PC: "
-DBGTEXT2:
-	.db "A: "
-DBGTEXT3:
-	.db "X: "
-DBGTEXT4:
-	.db "Y: "
-DBGTEXT5:
-	.db "SP: "
-DBGTEXT6:
-	.db "PS: "
-	.endif
-
+	.dw NMI
+	.dw RESET_MMC15
+	.dw IRQ
