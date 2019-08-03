@@ -452,6 +452,9 @@ DBGTEXT6:
 	.endif
 
 CHANGEMMCPRG:
+	;; Enables/disables PRG RAM and selects the PRG ROM bank
+	;; Input: <MMCRAM <MMCPRG
+	;; Clobbers: A
 	LDA <MMCRAM		; Read PRG RAM toggle
 	ASL A
 	ASL A
@@ -474,6 +477,9 @@ CHANGEMMCPRG:
 	.endif
 
 CLEARSCREEN:
+	;; Clears the tiles on the screen and all sprites
+	;; Input: none
+	;; Clobbers: A X Y
 	JSR RENDERDIS		; Disable rendering
 
 	LDA PPUSTATUS		; Read PPUSTATUS to reset PPUADDR latch
@@ -527,6 +533,9 @@ CLEARSCREEN:
 	.endif
 
 CLEARSPR:
+	;; Clears the sprites from the screen
+	;; Input: none
+	;; Clobbers: A X
 	LDA #$FF		; FF moves the sprites off the screen
 	LDX #$00
 .L1:
@@ -541,6 +550,9 @@ CLEARSPR:
 	.endif
 
 PPUCOPY:
+	;; Copies lengths of data from the CPU to the PPU
+	;; Input: <PPUCADDR <PPUCLEN <PPUCINPUT
+	;; Clobbers: A X Y
 	LDA PPUSTATUS		; Read PPUSTATUS to reset PPUADDR latch
 	LDA <PPUCADDR
 	STA PPUADDR
@@ -569,6 +581,9 @@ PPUCOPY:
 	.endif
 
 READJOYS:
+	;; Reads the controllers and saves the buttons pressed
+	;; Input: none
+	;; Clobbers: A X
 	LDA #$01
 	STA STROBE		; Bring strobe latch high
 	LDA #$00
@@ -592,6 +607,9 @@ READJOYS:
 	.endif
 
 RENDERDIS:
+	;; Disables rendering the screen
+	;; Input: none
+	;; Clobbers: A
 	LDA #$00000000
 	STA PPUMASK		; Disable BG and SPR
 
@@ -602,6 +620,9 @@ RENDERDIS:
 	.endif
 
 RENDEREN:
+	;; Enables rendering the screen
+	;; Input: none
+	;; Clobbers: A
 	LDA #%00011110
 	STA PPUMASK		; Enable BG and SPR
 
@@ -612,6 +633,9 @@ RENDEREN:
 	.endif
 
 RESETSCR:
+	;; Resets scrolling to the top left corner of nametables
+	;; Input: none
+	;; Clobbers: A
 	LDA #$00
 	STA PPUSCROLL
 	STA PPUSCROLL		; Reset PPU scrolling to top left corner
@@ -623,6 +647,9 @@ RESETSCR:
 	.endif
 
 UPDATE2000:
+	;; Selects background/sprite pattern tables, nametables, enables/disables NMI
+	;; Input: <BGPT <SPRPT <NT <NMIEN
+	;; Clobbers: A X
 	LDA #%00000000
 	ORA <NMIEN		; Add NMI toggle to status update
 	ORA <BGPT
@@ -638,6 +665,9 @@ UPDATE2000:
 	.endif
 
 VBWAIT:
+	;; Waits for the next vblank, or a number of vblanks
+	;; Input: <WAITFRAMES
+	;; Clobbers: A X
 	INC <NMIREADY		; Store waiting status
 .L1:
 	LDA <NMIREADY		; Load waiting status
@@ -676,6 +706,7 @@ NMI:
 
 	JSR RENDEREN		; Enable rendering
 	JSR READJOYS		; Read controllers
+	;; TODO - play sound
 
 	DEC <NMIREADY		; Reset waiting status
 	LDA <WAITFRAMES
