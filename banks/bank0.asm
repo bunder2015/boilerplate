@@ -266,7 +266,7 @@ RESET_MMC0:
         SEI
         LDX #$FF
         TXS
-        STX $8000
+        STX MMC1CTRL
         JMP RESET		; This should never happen, but lets pad the bytes
 
 	.dw NMI

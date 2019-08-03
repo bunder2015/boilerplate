@@ -25,6 +25,7 @@ DEBUG				; Comment this line to disable debugging
 
 	; NES CPU register constants
 	.include "./include/registers.asm"
+	.include "./include/mmc1-registers.asm"
 
 ;;;;;;;;;;
 
