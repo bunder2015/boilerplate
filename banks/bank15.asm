@@ -7,6 +7,7 @@
 	.db "15A"
 
 BREAK:
+	;; BRK debugger - store debug registers to memory, stop game execution, then display registers
 	STY <DBGY		; Stash Y register
 	TSX
 	INX
@@ -151,9 +152,12 @@ BREAK:
 	JMP .LOOP		; Infinite loop
 
 PRINTBYTE:
+	;; Prints debug registers from memory to screen (1-2 byte hex to ASCII)
+	;; Input: <PRINTB <DBGPC <DBGA <DBGX <DBGY <DBGSP <DBGPS
+	;; Clobbers: A
 	;; TODO - Optimize this subroutine for size
-	LDA <PRINTB
-	CMP #1
+	LDA <PRINTB		; Byte to print
+	CMP #1			; Program Counter
 	BNE .P2
 
 	LDA <DBGPC
@@ -222,8 +226,8 @@ PRINTBYTE:
 
 	JMP .OUT
 .P2:
-	LDA <PRINTB
-	CMP #2
+	LDA <PRINTB		; Byte to print
+	CMP #2			; A register
 	BNE .P3
 
 	LDA <DBGA
@@ -260,8 +264,8 @@ PRINTBYTE:
 
 	JMP .OUT
 .P3:
-	LDA <PRINTB
-	CMP #3
+	LDA <PRINTB		; Byte to print
+	CMP #3			; X register
 	BNE .P4
 
 	LDA <DBGX
@@ -298,8 +302,8 @@ PRINTBYTE:
 
 	JMP .OUT
 .P4:
-	LDA <PRINTB
-	CMP #4
+	LDA <PRINTB		; Byte to print
+	CMP #4			; Y register
 	BNE .P5
 
 	LDA <DBGY
@@ -336,8 +340,8 @@ PRINTBYTE:
 
 	JMP .OUT
 .P5:
-	LDA <PRINTB
-	CMP #5
+	LDA <PRINTB		; Byte to print
+	CMP #5			; Stack Pointer
 	BNE .P6
 
 	LDA <DBGSP
@@ -374,9 +378,9 @@ PRINTBYTE:
 
 	JMP .OUT
 .P6:
-	LDA <PRINTB
-	CMP #6
-	BNE .OUT
+	LDA <PRINTB		; Byte to print
+	CMP #6			; CPU status flags
+	BNE .OUT		; This should never happen
 
 	LDA <DBGPS
 	AND #%11110000
