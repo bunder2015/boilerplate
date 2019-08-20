@@ -64,11 +64,11 @@ MAINMENU:
 	STA <PPUCINPUT
 	LDA #HIGH(MENUTEXT1)
 	STA <PPUCINPUT+1
-	JSR PPUCOPY		; Load menu BG option text 1 into PPU
+	JSR PPUCOPY		; Load menu BG new game text into PPU
 
 	LDA #$22
 	STA <PPUCADDR
-	LDA #$6D
+	LDA #$8D
 	STA <PPUCADDR+1
 	LDA #0
 	STA <PPUCLEN
@@ -78,7 +78,7 @@ MAINMENU:
 	STA <PPUCINPUT
 	LDA #HIGH(MENUTEXT2)
 	STA <PPUCINPUT+1
-	JSR PPUCOPY		; Load menu BG option text 2 into PPU
+	JSR PPUCOPY		; Load menu BG option text into PPU
 
 	LDA #$23
 	STA <PPUCADDR
@@ -94,13 +94,14 @@ MAINMENU:
 	STA <PPUCINPUT+1
 	JSR PPUCOPY		; Load menu BG attributes into PPU
 
-	LDA #$60
+RETMAINMENU:
+	LDA #$58
 	STA SPR1X
-	LDA #$8F
+	LDA #$90
 	STA SPR1Y
 	LDA #$01
 	STA SPR1TILE
-	LDA #%00000001
+	LDA #%00000000
 	STA SPR1ATTR		; Draw a basic cursor sprite
 
 	LDA #%00000000
@@ -111,6 +112,8 @@ MAINMENU:
 	STA <NT			; Select nametable 0
 	JSR UPDATE2000		; Update PPU controls
 
+	LDA #5
+	STA <WAITFRAMES
 	JSR VBWAIT		; Wait for next vblank
 
 .MENULOOP:
@@ -118,31 +121,31 @@ MAINMENU:
 	AND #%00000100		; Check if player 1 is pressing down
 	BEQ .UP
 	LDA SPR1Y
-	CMP #$8F		; Check if the cursor is in the top position
+	CMP #$90		; Check if the cursor is in the top position
 	BNE .UP
-	LDA #$97
+	LDA #$A0
 	STA SPR1Y		; Move cursor down
 .UP:
 	LDA <JOY1IN
 	AND #%00001000		; Check if player 1 is pressing up
 	BEQ .STNEW
 	LDA SPR1Y
-	CMP #$97		; Check if the cursor is in the bottom position
+	CMP #$A0		; Check if the cursor is in the bottom position
 	BNE .STNEW
-	LDA #$8F
+	LDA #$90
 	STA SPR1Y		; Move cursor up
 .STNEW:
 	LDA <JOY1IN
 	AND #%00010000		; Check if player 1 is pressing start
 	BEQ .DONE
 	LDA SPR1Y
-	CMP #$8F		; Check if the cursor is in the top position
+	CMP #$90		; Check if the cursor is in the top position
 	BNE .STOPTS
 	JSR CLEARSCREEN		; Clear screen
 	JMP NEWGAME		; Go to new game
 .STOPTS:
 	LDA SPR1Y
-	CMP #$97		; Check if the cursor is in the bottom position
+	CMP #$A0		; Check if the cursor is in the bottom position
 	BNE .DONE
 	JSR CLEARSPR		; Clear sprites
 	JMP OPTIONS		; Go to game options menu
@@ -167,6 +170,8 @@ NEWGAME:
 	STA <NT			; Select nametable 0
 	JSR UPDATE2000		; Update PPU controls
 
+	LDA #5
+	STA <WAITFRAMES
 	JSR VBWAIT		; Wait for next vblank
 
 .STARTLOOP:
@@ -184,7 +189,82 @@ NEWGAME:
 OPTIONS:
 	JSR RENDERDIS		; Disable rendering to load PPU
 
-	;; TODO - Display options menu
+	LDA #$24
+	STA <PPUCADDR
+	LDA #$AA
+	STA <PPUCADDR+1
+	LDA #0
+	STA <PPUCLEN
+	LDA #11
+	STA <PPUCLEN+1
+	LDA #LOW(OPTIONSTEXT)
+	STA <PPUCINPUT
+	LDA #HIGH(OPTIONSTEXT)
+	STA <PPUCINPUT+1
+	JSR PPUCOPY		; Load options title text into PPU
+
+	LDA #$25
+	STA <PPUCADDR
+	LDA #$68
+	STA <PPUCADDR+1
+	LDA #0
+	STA <PPUCLEN
+	LDA #15
+	STA <PPUCLEN+1
+	LDA #LOW(OPTIONSTEXT1)
+	STA <PPUCINPUT
+	LDA #HIGH(OPTIONSTEXT1)
+	STA <PPUCINPUT+1
+	JSR PPUCOPY		; Load options music text into PPU
+
+	LDA #$26
+	STA <PPUCADDR
+	LDA #$86
+	STA <PPUCADDR+1
+	LDA #0
+	STA <PPUCLEN
+	LDA #20
+	STA <PPUCLEN+1
+	LDA #LOW(OPTIONSTEXT2)
+	STA <PPUCINPUT
+	LDA #HIGH(OPTIONSTEXT2)
+	STA <PPUCINPUT+1
+	JSR PPUCOPY		; Load options return text into PPU
+
+	LDA #$27
+	STA <PPUCADDR
+	LDA #$C0
+	STA <PPUCADDR+1
+	LDA #0
+	STA <PPUCLEN
+	LDA #64
+	STA <PPUCLEN+1
+	LDA #LOW(OPTIONSATTR)
+	STA <PPUCINPUT
+	LDA #HIGH(OPTIONSATTR)
+	STA <PPUCINPUT+1
+	JSR PPUCOPY		; Load menu BG attributes into PPU
+
+	;; TODO - We use the main menus palettes
+
+	LDA #$30
+	STA SPR1X
+	LDA #$58
+	STA SPR1Y
+	LDA #$01
+	STA SPR1TILE
+	LDA #%00000000
+	STA SPR1ATTR		; Draw the options cursor
+
+	;; TODO - Load music toggle and place music cursor accordingly
+	LDA #$78
+	STA SPR2X
+	LDA #$58
+	STA SPR2Y
+	LDA #$01
+	STA SPR2TILE
+	LDA #$00000001
+	STA SPR2ATTR		; Draw the music cursor
 
 	LDA #%00000000
 	STA <BGPT		; Select BG pattern table 0
@@ -194,11 +274,72 @@ OPTIONS:
 	STA <NT			; Select nametable 1
 	JSR UPDATE2000		; Update PPU controls
 
+	LDA #5
+	STA <WAITFRAMES
 	JSR VBWAIT		; Wait for next vblank
 
 .OPTIONSLOOP:
-	;; TODO - Input
-	BRK
+	; 30,58 "music" cursor position
+	; 20,A0 "return" cursor position
+	LDA <JOY1IN
+	AND #%00000100		; Check if player 1 is pressing down
+	BEQ .UP
+	LDA SPR1Y
+	CMP #$58		; Check if the cursor is in the top position
+	BNE .UP
+	LDA #$20
+	STA SPR1X
+	LDA #$A0
+	STA SPR1Y		; Move cursor down
+.UP:
+	LDA <JOY1IN
+	AND #%00001000		; Check if player 1 is pressing up
+	BEQ .LMUSIC
+	LDA SPR1Y
+	CMP #$A0		; Check if the cursor is in the bottom position
+	BNE .LMUSIC
+	LDA #$30
+	STA SPR1X
+	LDA #$58
+	STA SPR1Y		; Move cursor up
+.LMUSIC:
+	; 78,58 "on" music cursor position
+	; 98,58 "off" music cursor position
+	LDA <JOY1IN
+	AND #%00000010		; Check if player 1 is pressing left
+	BEQ .RMUSIC
+	LDA SPR1Y
+	CMP #$58		; Check if the cursor is in the top position
+	BNE .RMUSIC
+	LDA SPR2X
+	CMP #$98		; Check if the music cursor is in the right position
+	BNE .RMUSIC
+	;; TODO - Enable music
+	LDA #$78
+	STA SPR2X		; Move music cursor left
+.RMUSIC:
+	LDA <JOY1IN
+	AND #%00000001		; Check if player 1 is pressing right
+	BEQ .STRETURN
+	LDA SPR1Y
+	CMP #$58		; Check if the cursor is in the top position
+	BNE .STRETURN
+	LDA SPR2X
+	CMP #$78		; Check if the music cursor is in the left position
+	BNE .STRETURN
+	;; TODO - Disable music
+	LDA #$98
+	STA SPR2X		; Move music cursor right
+.STRETURN:
+	LDA <JOY1IN
+	AND #%00010000		; Check if player 1 is pressing start
+	BEQ .DONE
+	LDA SPR1Y
+	CMP #$A0		; Check if the cursor is in the bottom position
+	BNE .DONE
+	;; TODO - Save options
+	JSR CLEARSPR
+	JMP RETMAINMENU
 
 .DONE:
 	JSR VBWAIT		; Wait for next vblank
@@ -221,9 +362,9 @@ OPTIONS:
 MENUATTR:
 	.db $00,$00,$00,$00,$00,$00,$00,$00	; Top 2 rows of screen
 	.db $00,$00,$00,$00,$00,$00,$00,$00	; Second 2 rows of screen
-	.db $00,$00,$55,$55,$55,$55,$55,$00	; Third 2 rows of screen
-	.db $00,$00,$05,$05,$05,$05,$05,$00	; Fourth 2 rows of screen
-	.db $00,$00,$00,$F0,$F0,$30,$00,$00	; Fifth 2 rows of screen
+	.db $00,$00,$55,$55,$55,$55,$11,$00	; Third 2 rows of screen
+	.db $00,$00,$05,$05,$05,$05,$01,$00	; Fourth 2 rows of screen
+	.db $00,$00,$00,$00,$00,$00,$00,$00	; Fifth 2 rows of screen
 	.db $00,$00,$00,$00,$00,$00,$00,$00	; Sixth 2 rows of screen
 	.db $00,$00,$00,$00,$00,$00,$00,$00	; Seventh 2 rows of screen
 	.db $00,$00,$00,$00,$00,$00,$00,$00	; Last row of screen (lower nibbles)
@@ -241,22 +382,39 @@ MENUBG:
 	.db $86,$86,$86,$86,$86,$86,$86,$86,$87					; Row 5 of title
 
 MENUPALS:
-	.db $0F,$20,$10,$00	; BG palette 0
-	.db $0F,$15,$10,$02	; BG palette 1
-	.db $0F,$19,$10,$00	; BG palette 2
-	.db $0F,$28,$10,$00	; BG palette 3
+	.db $0F,$30,$10,$00	; BG palette 0
+	.db $0F,$2C,$21,$11	; BG palette 1
+	.db $0F,$30,$10,$00	; BG palette 2
+	.db $0F,$30,$10,$00	; BG palette 3
 
-	.db $0F,$11,$10,$13	; SPR palette 0
-	.db $0F,$26,$10,$2A	; SPR palette 1
-	.db $0F,$25,$17,$00	; SPR palette 2
-	.db $0F,$1C,$2C,$3C	; SPR palette 3
+	.db $0F,$13,$10,$00	; SPR palette 0
+	.db $0F,$15,$10,$00	; SPR palette 1
+	.db $0F,$30,$10,$00	; SPR palette 2
+	.db $0F,$30,$10,$00	; SPR palette 3
 
 MENUTEXT:
 	.db "BOILER PLATE!"
 MENUTEXT1:
-	.db "New Game"
+	.db "New game"
 MENUTEXT2:
 	.db "Options"
+
+OPTIONSATTR:
+	.db $00,$00,$00,$00,$00,$00,$00,$00	; Top 2 rows of screen
+	.db $00,$00,$04,$05,$05,$01,$00,$00	; Second 2 rows of screen
+	.db $00,$00,$00,$00,$00,$00,$00,$00	; Third 2 rows of screen
+	.db $00,$00,$00,$00,$00,$00,$00,$00	; Fourth 2 rows of screen
+	.db $00,$00,$00,$00,$00,$00,$00,$00	; Fifth 2 rows of screen
+	.db $00,$00,$00,$00,$00,$00,$00,$00	; Sixth 2 rows of screen
+	.db $00,$00,$00,$00,$00,$00,$00,$00	; Seventh 2 rows of screen
+	.db $00,$00,$00,$00,$00,$00,$00,$00	; Last 2 rows of screen (lower nibbles)
+
+OPTIONSTEXT:
+	.db "- Options -"
+OPTIONSTEXT1:
+	.db "Music:  On  Off"
+OPTIONSTEXT2:
+	.db "Return to main menu"
 
         .code
         .bank 1
