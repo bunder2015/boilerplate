@@ -125,6 +125,7 @@ RETMAINMENU:
 	BNE .UP
 	LDA #$A0
 	STA SPR1Y		; Move cursor down
+	JMP .DONE
 .UP:
 	LDA <JOY1IN
 	AND #%00001000		; Check if player 1 is pressing up
@@ -134,6 +135,7 @@ RETMAINMENU:
 	BNE .STNEW
 	LDA #$90
 	STA SPR1Y		; Move cursor up
+	JMP .DONE
 .STNEW:
 	LDA <JOY1IN
 	AND #%00010000		; Check if player 1 is pressing start
@@ -291,6 +293,7 @@ OPTIONS:
 	STA SPR1X
 	LDA #$A0
 	STA SPR1Y		; Move cursor down
+	JMP .DONE
 .UP:
 	LDA <JOY1IN
 	AND #%00001000		; Check if player 1 is pressing up
@@ -302,6 +305,7 @@ OPTIONS:
 	STA SPR1X
 	LDA #$58
 	STA SPR1Y		; Move cursor up
+	JMP .DONE
 .LMUSIC:
 	; 78,58 "on" music cursor position
 	; 98,58 "off" music cursor position
@@ -317,6 +321,7 @@ OPTIONS:
 	;; TODO - Enable music
 	LDA #$78
 	STA SPR2X		; Move music cursor left
+	JMP .DONE
 .RMUSIC:
 	LDA <JOY1IN
 	AND #%00000001		; Check if player 1 is pressing right
@@ -330,6 +335,7 @@ OPTIONS:
 	;; TODO - Disable music
 	LDA #$98
 	STA SPR2X		; Move music cursor right
+	JMP .DONE
 .STRETURN:
 	LDA <JOY1IN
 	AND #%00010000		; Check if player 1 is pressing start
@@ -337,10 +343,10 @@ OPTIONS:
 	LDA SPR1Y
 	CMP #$A0		; Check if the cursor is in the bottom position
 	BNE .DONE
+
 	;; TODO - Save options
 	JSR CLEARSPR
 	JMP RETMAINMENU
-
 .DONE:
 	JSR VBWAIT		; Wait for next vblank
 	JMP .OPTIONSLOOP
