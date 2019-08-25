@@ -50,8 +50,16 @@ JOY1IN:
 	.ds 1			; Joypad 1 input
 JOY2IN:
 	.ds 1			; Joypad 2 input
+MMCCHR:
+	.ds 1			; MMC1 selectable CHR ROM bank
+MMCCHRMODE:
+	.ds 1			; MMC1 CHR bank mode
+MMCMIRROR:
+	.ds 1			; MMC1 nametable mirroring mode
 MMCPRG:
 	.ds 1			; MMC1 selectable PRG ROM bank
+MMCPRGMODE:
+	.ds 1			; MMC1 PRG bank mode
 MMCRAM:
 	.ds 1			; MMC1 PRG RAM enable flag
 NMIEN:
@@ -73,7 +81,7 @@ SPREN:
 SPRPT:
 	.ds 1			; Sprite pattern table to display
 TEMP:
-	.ds 1			; Temporary variable for UPDATE2000/UPDATE2001
+	.ds 1			; Temporary variable for UPDATEPPUCTRL/UPDATEPPUMASK/UPDATEMMC1CTRL/UPDATEMMC1PRG
 WAITFRAMES:
 	.ds 1			; Number of frames to wait
 

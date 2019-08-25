@@ -110,7 +110,7 @@ RETMAINMENU:
 	STA <SPRPT		; Select sprite pattern table 1
 	LDA #0
 	STA <NT			; Select nametable 0
-	JSR UPDATE2000		; Update PPU controls
+	JSR UPDATEPPUCTRL	; Update PPU controls
 
 	;; TODO - load options, start music if enabled
 
@@ -172,7 +172,7 @@ NEWGAME:
 	STA <SPRPT		; Select sprite pattern table 1
 	LDA #0
 	STA <NT			; Select nametable 0
-	JSR UPDATE2000		; Update PPU controls
+	JSR UPDATEPPUCTRL	; Update PPU controls
 
 	LDA #5
 	STA <WAITFRAMES
@@ -276,7 +276,7 @@ OPTIONS:
 	STA <SPRPT		; Select sprite pattern table 1
 	LDA #NT_SEL1
 	STA <NT			; Select nametable 1
-	JSR UPDATE2000		; Update PPU controls
+	JSR UPDATEPPUCTRL	; Update PPU controls
 
 	LDA #5
 	STA <WAITFRAMES

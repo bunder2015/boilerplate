@@ -145,7 +145,7 @@ BREAK:
 
 	LDA #0
 	STA <NT			; Select nametable 0
-	JSR UPDATE2000
+	JSR UPDATEPPUCTRL
 
 	JSR VBWAIT
 .LOOP:
@@ -455,31 +455,6 @@ DBGTEXT6:
 	.db "15B"
 	.endif
 
-CHANGEMMCPRG:
-	;; Enables/disables PRG RAM and selects the PRG ROM bank
-	;; Input: <MMCRAM <MMCPRG
-	;; Clobbers: A
-	LDA <MMCRAM		; Read PRG RAM toggle
-	ASL A
-	ASL A
-	ASL A
-	ASL A
-	ORA <MMCPRG		; Read PRG ROM bank
-	STA MMC1PRG
-	LSR A
-	STA MMC1PRG
-	LSR A
-	STA MMC1PRG
-	LSR A
-	STA MMC1PRG
-	LSR A
-	STA MMC1PRG		; Change the PRG ROM+RAM settings
-	RTS
-
-	.ifdef DEBUG
-	BRK			; Catch runaway execution
-	.endif
-
 CLEARSCREEN:
 	;; Clears the tiles on the screen and all sprites
 	;; Input: none
@@ -527,7 +502,7 @@ CLEARSCREEN:
 
 	JSR CLEARSPR		; Clear sprites from screen
 	JSR RESETSCR		; Reset PPU scrolling
-	JSR UPDATE2000		; Update PPU controls
+	JSR UPDATEPPUCTRL	; Update PPU controls
 	JSR VBWAIT		; Wait for next vblank
 
 	RTS
@@ -618,7 +593,7 @@ RENDERDIS:
 	STA <SPREN
 	STA <BGEN
 
-	JSR UPDATE2001
+	JSR UPDATEPPUMASK
 
 	RTS
 
@@ -635,7 +610,7 @@ RENDEREN:
 	LDA #BG_REND_EN
 	STA <BGEN
 
-	JSR UPDATE2001
+	JSR UPDATEPPUMASK
 
 	RTS
 
@@ -657,7 +632,7 @@ RESETSCR:
 	BRK			; Catch runaway execution
 	.endif
 
-UPDATE2000:
+UPDATEPPUCTRL:
 	;; Selects background/sprite pattern tables, nametables, enables/disables NMI
 	;; Input: <BGPT <SPRPT <NT <NMIEN
 	;; Clobbers: A X
@@ -693,7 +668,7 @@ UPDATE2000:
 	BRK			; Catch runaway execution
 	.endif
 
-UPDATE2001:
+UPDATEPPUMASK:
 	;; Sets b+w/colour modes, enables leftmost 8px cropping, enables rendering, and colour emphasis
 	;; Input: <COLOUREN <BGCROP <SPRCROP <BGEN <SPREN <CEMPHR <CEMPHG <CEMPHB
 	;; Clobbers: A
@@ -737,6 +712,69 @@ UPDATE2001:
 	STA <TEMP		; Bit 0 - Colour enable
 
 	STA PPUMASK		; Write combined bitfield to PPUMASK
+
+	RTS
+
+	.ifdef DEBUG
+	BRK			; Catch runaway execution
+	.endif
+
+UPDATEMMC1CTRL:
+	;; Sets PRG ROM and CHR ROM bank modes and nametable mirroring mode
+	;; Input: <MMCCHRMODE <MMCPRGMODE <MMCMIRROR
+	;; Clobbers: A
+	LDA <MMCCHRMODE
+	AND #MMC1_CHR_MODE1
+	STA <TEMP		; Bit 4 - MMC1 CHR ROM bank mode
+
+	LDA <MMCPRGMODE
+	AND #MMC1_PRG_MODE3
+	ORA <TEMP
+	STA <TEMP		; Bits 3 and 2 - MMC1 PRG ROM bank mode
+
+	LDA <MMCMIRROR
+	AND #MMC1_MIRROR_H
+	ORA <TEMP
+	STA <TEMP		; Bits 1 and 0 - MMC1 mirroring mode
+
+	STA MMC1CTRL
+	LSR A
+	STA MMC1CTRL
+	LSR A
+	STA MMC1CTRL
+	LSR A
+	STA MMC1CTRL
+	LSR A
+	STA MMC1CTRL		; Write combined bitfield to MMC1CTRL
+
+	RTS
+
+	.ifdef DEBUG
+	BRK			; Catch runaway execution
+	.endif
+
+UPDATEMMC1PRG:
+	;; Enables/disables PRG RAM and selects the PRG ROM bank
+	;; Input: <MMCRAM <MMCPRG
+	;; Clobbers: A
+	LDA <MMCRAM
+	AND #MMC1_PRGRAM_DIS
+	STA <TEMP		; Bit 4 - PRG RAM toggle
+
+	LDA <MMCPRG
+	AND #MMC1_PRG_BANK15
+	ORA <TEMP
+	STA <TEMP		; Bits 3 to 0 - PRG ROM bank
+
+	STA MMC1PRG
+	LSR A
+	STA MMC1PRG
+	LSR A
+	STA MMC1PRG
+	LSR A
+	STA MMC1PRG
+	LSR A
+	STA MMC1PRG		; Write combined bitfield to MMC1PRG
 
 	RTS
 
@@ -842,26 +880,24 @@ RESET:
 	BPL .VB2		; Wait for second vblank
 
 .MMC1INIT:
-	LDA #%00001110		; Vertical mirroring, bank 15 fixed at $C000, 8kb CHR ROM banks
-	STA MMC1CTRL
-	LSR A
-	STA MMC1CTRL
-	LSR A
-	STA MMC1CTRL
-	LSR A
-	STA MMC1CTRL
-	LSR A
-	STA MMC1CTRL		; Initialize MMC1
+	LDA #0
+	STA <MMCCHRMODE		; CHR mode 0 (8k switchable pattern tables)
+	LDA #MMC1_MIRROR_V
+	STA <MMCMIRROR		; Vertical mirroring selected
+	LDA #MMC1_PRG_MODE3
+	STA <MMCPRGMODE		; PRG mode 3 (bank 15 fixed to CPU $C000, switchable $8000)
+	JSR UPDATEMMC1CTRL
 
 	LDA #0
-	STA <MMCPRG		; Bank 0 selected at $8000
+	STA <MMCPRG		; PRG bank 0 selected at CPU $8000
+	LDA #MMC1_PRGRAM_DIS
 	STA <MMCRAM		; PRG RAM disabled
-	JSR CHANGEMMCPRG
+	JSR UPDATEMMC1PRG
 
 .RESETDONE:
 	LDA #NMI_EN
 	STA <NMIEN		; Enable NMI
-	JSR UPDATE2000
+	JSR UPDATEPPUCTRL
 	JSR CLEARSCREEN		; Clear the screen
 	JMP MAINMENU		; Go to main menu
 
