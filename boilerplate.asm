@@ -50,8 +50,10 @@ JOY1IN:
 	.ds 1			; Joypad 1 input
 JOY2IN:
 	.ds 1			; Joypad 2 input
-MMCCHR:
-	.ds 1			; MMC1 selectable CHR ROM bank
+MMCCHR0:
+	.ds 1			; MMC1 selectable CHR ROM bank 0
+MMCCHR1:
+	.ds 1			; MMC1 selectable CHR ROM bank 1
 MMCCHRMODE:
 	.ds 1			; MMC1 CHR bank mode
 MMCMIRROR:

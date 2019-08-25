@@ -24,7 +24,11 @@ BREAK:
 	DEC <DBGPC+1		; Return program counter to address that caused the BRK
 
 	;; TODO - stop sound
-	JSR RENDERDIS
+	LDA #0
+	STA <SPREN
+	STA <BGEN
+	JSR UPDATEPPUMASK	; Disable rendering
+
 	JSR CLEARSCREEN
 
 	LDA #$3F
@@ -459,7 +463,10 @@ CLEARSCREEN:
 	;; Clears the tiles on the screen and all sprites
 	;; Input: none
 	;; Clobbers: A X Y
-	JSR RENDERDIS		; Disable rendering
+	LDA #0
+	STA <SPREN
+	STA <BGEN
+	JSR UPDATEPPUMASK	; Disable rendering
 
 	LDA PPUSTATUS		; Read PPUSTATUS to reset PPUADDR latch
 	LDA #$20
@@ -578,39 +585,6 @@ READJOYS:
 	ROL <JOY2IN		; Rotate carry into storage
 	DEX
 	BNE .L1			; Loop through 8 joypad buttons
-
-	RTS
-
-	.ifdef DEBUG
-	BRK			; Catch runaway execution
-	.endif
-
-RENDERDIS:
-	;; Disables rendering the screen
-	;; Input: none
-	;; Clobbers: A
-	LDA #0
-	STA <SPREN
-	STA <BGEN
-
-	JSR UPDATEPPUMASK
-
-	RTS
-
-	.ifdef DEBUG
-	BRK			; Catch runaway execution
-	.endif
-
-RENDEREN:
-	;; Enables rendering the screen
-	;; Input: none
-	;; Clobbers: A
-	LDA #SPR_REND_EN
-	STA <SPREN
-	LDA #BG_REND_EN
-	STA <BGEN
-
-	JSR UPDATEPPUMASK
 
 	RTS
 
@@ -782,6 +756,52 @@ UPDATEMMC1PRG:
 	BRK			; Catch runaway execution
 	.endif
 
+UPDATEMMC1CHR0:
+	;; Selects the first CHR ROM bank
+	;; Input: <MMCCHR0
+	;; Clobbers: A
+	LDA <MMCCHR0
+	AND #MMC1_CHR_BANKS
+
+	STA MMC1CHR0
+	LSR A
+	STA MMC1CHR0
+	LSR A
+	STA MMC1CHR0
+	LSR A
+	STA MMC1CHR0
+	LSR A
+	STA MMC1CHR0		; Write bitfield to MMC1CHR0
+
+	RTS
+
+	.ifdef DEBUG
+	BRK			; Catch runaway execution
+	.endif
+
+UPDATEMMC1CHR1:
+	;; Selects the second CHR ROM bank
+	;; Input: <MMCCHR1
+	;; Clobbers: A
+	LDA <MMCCHR1
+	AND #MMC1_CHR_BANKS
+
+	STA MMC1CHR1
+	LSR A
+	STA MMC1CHR1
+	LSR A
+	STA MMC1CHR1
+	LSR A
+	STA MMC1CHR1
+	LSR A
+	STA MMC1CHR1		; Write bitfield to MMC1CHR1
+
+	RTS
+
+	.ifdef DEBUG
+	BRK			; Catch runaway execution
+	.endif
+
 VBWAIT:
 	;; Waits for the next vblank, or a number of vblanks
 	;; Input: <WAITFRAMES
@@ -822,7 +842,12 @@ NMI:
 	LDA #$02
 	STA OAMDMA		; DMA transfer $0200-$02FF to PPU OAM
 
-	JSR RENDEREN		; Enable rendering
+	LDA #SPR_REND_EN
+	STA <SPREN
+	LDA #BG_REND_EN
+	STA <BGEN
+	JSR UPDATEPPUMASK	; Enable rendering
+
 	JSR READJOYS		; Read controllers
 	;; TODO - play sound
 
@@ -880,8 +905,8 @@ RESET:
 	BPL .VB2		; Wait for second vblank
 
 .MMC1INIT:
-	LDA #0
-	STA <MMCCHRMODE		; CHR mode 0 (8k switchable pattern tables)
+	LDA #MMC1_CHR_MODE1
+	STA <MMCCHRMODE		; CHR mode 0 (2x4k switchable pattern tables)
 	LDA #MMC1_MIRROR_V
 	STA <MMCMIRROR		; Vertical mirroring selected
 	LDA #MMC1_PRG_MODE3
@@ -893,6 +918,14 @@ RESET:
 	LDA #MMC1_PRGRAM_DIS
 	STA <MMCRAM		; PRG RAM disabled
 	JSR UPDATEMMC1PRG
+
+	LDA #0
+	STA <MMCCHR0		; CHR bank 0 selected at PPU $0000
+	JSR UPDATEMMC1CHR0
+
+	LDA #MMC1_CHR_BANK1
+	STA <MMCCHR1		; CHR bank 1 selected at PPU $1000
+	JSR UPDATEMMC1CHR1
 
 .RESETDONE:
 	LDA #NMI_EN

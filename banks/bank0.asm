@@ -8,7 +8,10 @@
 	.endif
 
 MAINMENU:
-	JSR RENDERDIS		; Disable rendering to load PPU
+	LDA #0
+	STA <SPREN
+	STA <BGEN
+	JSR UPDATEPPUMASK	; Disable rendering
 
 	LDA #$3F
 	STA <PPUCADDR
@@ -162,7 +165,10 @@ RETMAINMENU:
 	.endif
 
 NEWGAME:
-	JSR RENDERDIS		; Disable rendering to load PPU
+	LDA #0
+	STA <SPREN
+	STA <BGEN
+	JSR UPDATEPPUMASK	; Disable rendering
 
 	;; TODO - Display new game start
 
@@ -191,7 +197,10 @@ NEWGAME:
 	.endif
 
 OPTIONS:
-	JSR RENDERDIS		; Disable rendering to load PPU
+	LDA #0
+	STA <SPREN
+	STA <BGEN
+	JSR UPDATEPPUMASK	; Disable rendering
 
 	LDA #$24
 	STA <PPUCADDR
