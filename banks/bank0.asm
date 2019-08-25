@@ -104,13 +104,15 @@ RETMAINMENU:
 	LDA #%00000000
 	STA SPR1ATTR		; Draw a basic cursor sprite
 
-	LDA #%00000000
+	LDA #0
 	STA <BGPT		; Select BG pattern table 0
-	LDA #%00001000
+	LDA #SPR_PT1
 	STA <SPRPT		; Select sprite pattern table 1
-	LDA #%00000000
+	LDA #0
 	STA <NT			; Select nametable 0
 	JSR UPDATE2000		; Update PPU controls
+
+	;; TODO - load options, start music if enabled
 
 	LDA #5
 	STA <WAITFRAMES
@@ -118,7 +120,7 @@ RETMAINMENU:
 
 .MENULOOP:
 	LDA <JOY1IN
-	AND #%00000100		; Check if player 1 is pressing down
+	AND #BUTTON_DOWN	; Check if player 1 is pressing down
 	BEQ .UP
 	LDA SPR1Y
 	CMP #$90		; Check if the cursor is in the top position
@@ -128,7 +130,7 @@ RETMAINMENU:
 	JMP .DONE
 .UP:
 	LDA <JOY1IN
-	AND #%00001000		; Check if player 1 is pressing up
+	AND #BUTTON_UP		; Check if player 1 is pressing up
 	BEQ .STNEW
 	LDA SPR1Y
 	CMP #$A0		; Check if the cursor is in the bottom position
@@ -138,7 +140,7 @@ RETMAINMENU:
 	JMP .DONE
 .STNEW:
 	LDA <JOY1IN
-	AND #%00010000		; Check if player 1 is pressing start
+	AND #BUTTON_START	; Check if player 1 is pressing start
 	BEQ .DONE
 	LDA SPR1Y
 	CMP #$90		; Check if the cursor is in the top position
@@ -164,11 +166,11 @@ NEWGAME:
 
 	;; TODO - Display new game start
 
-	LDA #%00000000
+	LDA #0
 	STA <BGPT		; Select BG pattern table 0
-	LDA #%00001000
+	LDA #SPR_PT1
 	STA <SPRPT		; Select sprite pattern table 1
-	LDA #%00000000
+	LDA #0
 	STA <NT			; Select nametable 0
 	JSR UPDATE2000		; Update PPU controls
 
@@ -268,11 +270,11 @@ OPTIONS:
 	LDA #$00000001
 	STA SPR2ATTR		; Draw the music cursor
 
-	LDA #%00000000
+	LDA #0
 	STA <BGPT		; Select BG pattern table 0
-	LDA #%00001000
+	LDA #SPR_PT1
 	STA <SPRPT		; Select sprite pattern table 1
-	LDA #%00000001
+	LDA #NT_SEL1
 	STA <NT			; Select nametable 1
 	JSR UPDATE2000		; Update PPU controls
 
@@ -284,7 +286,7 @@ OPTIONS:
 	; 30,58 "music" cursor position
 	; 20,A0 "return" cursor position
 	LDA <JOY1IN
-	AND #%00000100		; Check if player 1 is pressing down
+	AND #BUTTON_DOWN	; Check if player 1 is pressing down
 	BEQ .UP
 	LDA SPR1Y
 	CMP #$58		; Check if the cursor is in the top position
@@ -296,7 +298,7 @@ OPTIONS:
 	JMP .DONE
 .UP:
 	LDA <JOY1IN
-	AND #%00001000		; Check if player 1 is pressing up
+	AND #BUTTON_UP		; Check if player 1 is pressing up
 	BEQ .LMUSIC
 	LDA SPR1Y
 	CMP #$A0		; Check if the cursor is in the bottom position
@@ -310,7 +312,7 @@ OPTIONS:
 	; 78,58 "on" music cursor position
 	; 98,58 "off" music cursor position
 	LDA <JOY1IN
-	AND #%00000010		; Check if player 1 is pressing left
+	AND #BUTTON_LEFT	; Check if player 1 is pressing left
 	BEQ .RMUSIC
 	LDA SPR1Y
 	CMP #$58		; Check if the cursor is in the top position
@@ -319,12 +321,13 @@ OPTIONS:
 	CMP #$98		; Check if the music cursor is in the right position
 	BNE .RMUSIC
 	;; TODO - Enable music
+
 	LDA #$78
 	STA SPR2X		; Move music cursor left
 	JMP .DONE
 .RMUSIC:
 	LDA <JOY1IN
-	AND #%00000001		; Check if player 1 is pressing right
+	AND #BUTTON_RIGHT	; Check if player 1 is pressing right
 	BEQ .STRETURN
 	LDA SPR1Y
 	CMP #$58		; Check if the cursor is in the top position
@@ -333,18 +336,19 @@ OPTIONS:
 	CMP #$78		; Check if the music cursor is in the left position
 	BNE .STRETURN
 	;; TODO - Disable music
+
 	LDA #$98
 	STA SPR2X		; Move music cursor right
 	JMP .DONE
 .STRETURN:
 	LDA <JOY1IN
-	AND #%00010000		; Check if player 1 is pressing start
+	AND #BUTTON_START	; Check if player 1 is pressing start
 	BEQ .DONE
 	LDA SPR1Y
 	CMP #$A0		; Check if the cursor is in the bottom position
 	BNE .DONE
-
 	;; TODO - Save options
+
 	JSR CLEARSPR
 	JMP RETMAINMENU
 .DONE:

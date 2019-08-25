@@ -32,8 +32,20 @@ DEBUG				; Comment this line to disable debugging
 	; Zero-page memory $0000-00FF
 	.zp
 
+BGCROP:
+	.ds 1			; Leftmost 8px BG crop
+BGEN:
+	.ds 1			; BG render enable
 BGPT:
 	.ds 1			; BG pattern table to display
+CEMPHB:
+	.ds 1			; PPU blue colour emphasis
+CEMPHG:
+	.ds 1			; PPU green colour emphasis
+CEMPHR:
+	.ds 1			; PPU red colour emphasis
+COLOUREN:
+	.ds 1			; Colour enable
 JOY1IN:
 	.ds 1			; Joypad 1 input
 JOY2IN:
@@ -54,8 +66,14 @@ PPUCINPUT:
 	.ds 2			; PPUCOPY source address
 PPUCLEN:
 	.ds 2			; Length of PPUCOPY source data
+SPRCROP:
+	.ds 1			; Leftmost 8px SPR crop
+SPREN:
+	.ds 1			; SPR render enable
 SPRPT:
 	.ds 1			; Sprite pattern table to display
+TEMP:
+	.ds 1			; Temporary variable for UPDATE2000/UPDATE2001
 WAITFRAMES:
 	.ds 1			; Number of frames to wait
 

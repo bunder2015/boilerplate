@@ -143,7 +143,7 @@ BREAK:
 	STA <PRINTB
 	JSR PRINTBYTE
 
-	LDA #%00000000
+	LDA #0
 	STA <NT			; Select nametable 0
 	JSR UPDATE2000
 
@@ -614,8 +614,11 @@ RENDERDIS:
 	;; Disables rendering the screen
 	;; Input: none
 	;; Clobbers: A
-	LDA #$00000000
-	STA PPUMASK		; Disable BG and SPR
+	LDA #0
+	STA <SPREN
+	STA <BGEN
+
+	JSR UPDATE2001
 
 	RTS
 
@@ -627,8 +630,12 @@ RENDEREN:
 	;; Enables rendering the screen
 	;; Input: none
 	;; Clobbers: A
-	LDA #%00011110
-	STA PPUMASK		; Enable BG and SPR
+	LDA #SPR_REND_EN
+	STA <SPREN
+	LDA #BG_REND_EN
+	STA <BGEN
+
+	JSR UPDATE2001
 
 	RTS
 
@@ -654,13 +661,82 @@ UPDATE2000:
 	;; Selects background/sprite pattern tables, nametables, enables/disables NMI
 	;; Input: <BGPT <SPRPT <NT <NMIEN
 	;; Clobbers: A X
-	LDA #%00000000
-	ORA <NMIEN		; Add NMI toggle to status update
-	ORA <BGPT
-	ORA <SPRPT		; Add pattern table selectons to status update
-	ORA <NT			; Add nametable selection to status update
+	LDA <NMIEN
+	AND #NMI_EN
+	STA <TEMP		; Bit 7 - NMI enable toggle
+
+	; TODO - bit 5
+
+	LDA <BGPT
+	AND #BG_PT1
+	ORA <TEMP
+	STA <TEMP		; Bit 4 - BG pattern table selection
+
+	LDA <SPRPT
+	AND #SPR_PT1
+	ORA <TEMP
+	STA <TEMP		; Bit 3 - SPR pattern table selection
+
+	; TODO - bit 2
+
+	LDA <NT
+	AND #NT_SEL3
+	ORA <TEMP
+	STA <TEMP		; Bits 1 and 0 - Nametable selection
+
 	LDX PPUSTATUS		; Read PPUSTATUS to clear vblank
-	STA PPUCTRL		; Write update byte to PPU
+	STA PPUCTRL		; Write combined bitfield to PPUCTRL
+
+	RTS
+
+	.ifdef DEBUG
+	BRK			; Catch runaway execution
+	.endif
+
+UPDATE2001:
+	;; Sets b+w/colour modes, enables leftmost 8px cropping, enables rendering, and colour emphasis
+	;; Input: <COLOUREN <BGCROP <SPRCROP <BGEN <SPREN <CEMPHR <CEMPHG <CEMPHB
+	;; Clobbers: A
+	LDA <CEMPHB
+	AND #CLR_EMPH_BLUE
+	STA <TEMP		; Bit 7 - Colour emphasis blue
+
+	LDA <CEMPHG
+	AND #CLR_EMPH_GREEN
+	ORA <TEMP
+	STA <TEMP		; Bit 6 - Colour emphasis green
+
+	LDA <CEMPHR
+	AND #CLR_EMPH_RED
+	ORA <TEMP
+	STA <TEMP		; Bit 5 - Colour emphasis red
+
+	LDA <SPREN
+	AND #SPR_REND_EN
+	ORA <TEMP
+	STA <TEMP		; Bit 4 - SPR rendering enable
+
+	LDA <BGEN
+	AND #BG_REND_EN
+	ORA <TEMP
+	STA <TEMP		; Bit 3 - BG rendering enable
+
+	LDA <SPRCROP
+	AND #SPR_REND_CROP
+	ORA <TEMP
+	STA <TEMP		; Bit 2 - SPR leftmost 8px cropping
+
+	LDA <BGCROP
+	AND #BG_REND_CROP
+	ORA <TEMP
+	STA <TEMP		; Bit 1 - BG leftmost 8px cropping
+
+	LDA <COLOUREN
+	AND #CLR_EN
+	ORA <TEMP
+	STA <TEMP		; Bit 0 - Colour enable
+
+	STA PPUMASK		; Write combined bitfield to PPUMASK
 
 	RTS
 
@@ -737,7 +813,7 @@ RESET:
 	STX APUFRAME		; Disable APU frame IRQ
 	LDX #$FF
 	TXS			; Initialize stack pointer
-	INX
+	INX			; Roll X over back to #$00
 	STX PPUCTRL		; Disable PPU vblank NMI
 	STX PPUMASK		; Disable PPU rendering
 	STX DMCFREQ		; Disable APU DMC IRQ
@@ -783,7 +859,7 @@ RESET:
 	JSR CHANGEMMCPRG
 
 .RESETDONE:
-	LDA #%10000000
+	LDA #NMI_EN
 	STA <NMIEN		; Enable NMI
 	JSR UPDATE2000
 	JSR CLEARSCREEN		; Clear the screen
