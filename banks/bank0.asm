@@ -97,6 +97,26 @@ MAINMENU:
 	STA <PPUCINPUT+1
 	JSR PPUCOPY		; Load menu BG attributes into PPU
 
+	LDA #0
+	STA <MMCRAM
+	JSR UPDATEMMC1PRG	; Enable PRG RAM
+
+	JSR SRAMTESTA		; Verify header and footer
+	BNE .AOK
+	;; TODO - checksum saved data when we get more data
+	JSR SRAMWIPE		; Wipe PRG RAM if bad
+.AOK:
+	LDA SRAMMUSIC
+	AND #%00000001
+	STA MUSICEN		; Load music toggle from PRG RAM and store to WRAM
+	BEQ .SRAMTESTDONE
+	;; TODO - start music
+
+.SRAMTESTDONE:
+	LDA #MMC1_PRGRAM_DIS
+	STA <MMCRAM
+	JSR UPDATEMMC1PRG	; Disable PRG RAM until we need it again
+
 RETMAINMENU:
 	LDA #$58
 	STA SPR1X
@@ -115,11 +135,13 @@ RETMAINMENU:
 	STA <NT			; Select nametable 0
 	JSR UPDATEPPUCTRL	; Update PPU controls
 
-	;; TODO - load options, start music if enabled
+	LDA #0
+	STA <SCROLLX
+	STA <SCROLLY		; Set initial scroll to top left corner
 
-	LDA #5
+	LDA #30
 	STA <WAITFRAMES
-	JSR VBWAIT		; Wait for next vblank
+	JSR VBWAIT		; Wait for 30 frames
 
 .MENULOOP:
 	LDA <JOY1IN
@@ -269,9 +291,16 @@ OPTIONS:
 	LDA #%00000000
 	STA SPR1ATTR		; Draw the options cursor
 
-	;; TODO - Load music toggle and place music cursor accordingly
+	LDA MUSICEN
+	CMP #1
+	BNE .MUSICOFF
 	LDA #$78
 	STA SPR2X
+	JMP .MUSICDONE
+.MUSICOFF:
+	LDA #$98
+	STA SPR2X
+.MUSICDONE:
 	LDA #$58
 	STA SPR2Y
 	LDA #$01
@@ -329,6 +358,8 @@ OPTIONS:
 	LDA SPR2X
 	CMP #$98		; Check if the music cursor is in the right position
 	BNE .RMUSIC
+	LDA #1
+	STA MUSICEN
 	;; TODO - Enable music
 
 	LDA #$78
@@ -344,6 +375,8 @@ OPTIONS:
 	LDA SPR2X
 	CMP #$78		; Check if the music cursor is in the left position
 	BNE .STRETURN
+	LDA #0
+	STA MUSICEN
 	;; TODO - Disable music
 
 	LDA #$98
@@ -356,6 +389,18 @@ OPTIONS:
 	LDA SPR1Y
 	CMP #$A0		; Check if the cursor is in the bottom position
 	BNE .DONE
+
+	LDA #0
+	STA <MMCRAM
+	JSR UPDATEMMC1PRG	; Enable PRG RAM
+
+	LDA MUSICEN
+	STA SRAMMUSIC		; Save music toggle to PRG RAM
+
+	LDA #MMC1_PRGRAM_DIS
+	STA <MMCRAM
+	JSR UPDATEMMC1PRG	; Disable PRG RAM
+
 	;; TODO - Save options
 
 	JSR CLEARSPR

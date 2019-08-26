@@ -46,6 +46,12 @@ CEMPHR:
 	.ds 1			; PPU red colour emphasis
 COLOUREN:
 	.ds 1			; Colour enable
+CPUCADDR:
+	.ds 2			; CPUCOPY destination address
+CPUCINPUT:
+	.ds 2			; CPUCOPY source address
+CPUCLEN:
+	.ds 2			; Length of CPUCOPY source data
 JOY1IN:
 	.ds 1			; Joypad 1 input
 JOY2IN:
@@ -76,6 +82,10 @@ PPUCINPUT:
 	.ds 2			; PPUCOPY source address
 PPUCLEN:
 	.ds 2			; Length of PPUCOPY source data
+SCROLLX:
+	.ds 1			; Scroll position X
+SCROLLY:
+	.ds 1			; Scroll position Y
 SPRCROP:
 	.ds 1			; Leftmost 8px SPR crop
 SPREN:
@@ -84,6 +94,8 @@ SPRPT:
 	.ds 1			; Sprite pattern table to display
 TEMP:
 	.ds 1			; Temporary variable for UPDATEPPUCTRL/UPDATEPPUMASK/UPDATEMMC1CTRL/UPDATEMMC1PRG
+TEMPADDR:
+	.ds 2			; Temporary address variable
 WAITFRAMES:
 	.ds 1			; Number of frames to wait
 
@@ -115,13 +127,22 @@ PRINTB:
 	; Reserve first 256b chunk of WRAM for PPU OAM
 	.include "./include/bss-ppu-oam.asm"
 
+MUSICEN:
+	.ds 1			; Music toggle
+
 ;;;;;;;;;;
 
 	; Cartridge memory $6000-7FFF
 	.sram
 
-TEMPVAR:
-	.ds 1			; Added for testing
+SRAMHEADER:
+	.ds 16			; SRAM header for verification
+SRAMMUSIC:
+	.ds 1			; Music toggle
+
+	.org $7FF0
+SRAMFOOTER:
+	.ds 16			; SRAM footer for verification
 
 ;;;;;;;;;;
 

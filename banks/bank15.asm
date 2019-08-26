@@ -450,6 +450,12 @@ DBGTEXT6:
 
 	.endif
 
+SRAMHEADERTEXT:
+	.db "THERMOTELEPHONIC"
+
+SRAMFOOTERTEXT:
+	.db "DISCOMBOBULATION"
+
 	.code
 	.bank 31
 	.org $E000
@@ -468,7 +474,7 @@ CLEARSCREEN:
 	STA <BGEN
 	JSR UPDATEPPUMASK	; Disable rendering
 
-	LDA PPUSTATUS		; Read PPUSTATUS to reset PPUADDR latch
+	BIT PPUSTATUS		; Read PPUSTATUS to reset PPUADDR latch
 	LDA #$20
 	STA PPUADDR
 	LDA #$00
@@ -491,7 +497,7 @@ CLEARSCREEN:
 	CPX <PPUCLEN
 	BNE .L1
 
-	LDA PPUSTATUS
+	BIT PPUSTATUS		; Read PPUSTATUS to reset PPUADDR latch
 	LDA #$3F
 	STA PPUADDR
 	LDA #$00
@@ -535,11 +541,35 @@ CLEARSPR:
 	BRK			; Catch runaway execution
 	.endif
 
+CPUCOPY:
+	;; Copies lengths of data within the CPU address space
+	;; Input: <CPUCADDR <CPUCLEN <CPUCINPUT
+	;; Clobbers: A X Y
+	LDX #$FF
+	LDY #$00		; Set loop counters
+
+.L1:
+	LDA [CPUCINPUT], Y	; Load data
+	STA [CPUCADDR], Y	; Store data
+	INY
+	CPY <CPUCLEN+1
+	BNE .L1
+	LDY #$00
+	INX
+	CPX <CPUCLEN		; Check to see if we have finished copying
+	BNE .L1			; Loop if we have not finished copying
+
+	RTS
+
+	.ifdef DEBUG
+	BRK			; Catch runaway execution
+	.endif
+
 PPUCOPY:
 	;; Copies lengths of data from the CPU to the PPU
 	;; Input: <PPUCADDR <PPUCLEN <PPUCINPUT
 	;; Clobbers: A X Y
-	LDA PPUSTATUS		; Read PPUSTATUS to reset PPUADDR latch
+	BIT PPUSTATUS		; Read PPUSTATUS to reset PPUADDR latch
 	LDA <PPUCADDR
 	STA PPUADDR
 	LDA <PPUCADDR+1
@@ -593,12 +623,95 @@ READJOYS:
 	.endif
 
 RESETSCR:
-	;; Resets scrolling to the top left corner of nametables
-	;; Input: none
+	;; Resets scrolling to the correct position
+	;; Input: <SCROLLX <SCROLLY
 	;; Clobbers: A
-	LDA #$00
+	BIT PPUSTATUS		; Read PPUSTATUS to reset PPUADDR latch
+
+	LDA <SCROLLX
 	STA PPUSCROLL
-	STA PPUSCROLL		; Reset PPU scrolling to top left corner
+	LDA <SCROLLY
+	STA PPUSCROLL		; Reset PPU scrolling
+
+	RTS
+
+	.ifdef DEBUG
+	BRK			; Catch runaway execution
+	.endif
+
+SRAMTESTA:
+	;; Verifies the PRG RAM header and footer, returns 1 on success
+	;; Input: none
+	;; Clobbers: A Y
+	LDY #$00
+.L1:
+	LDA SRAMHEADERTEXT, Y
+	CMP SRAMHEADER, Y
+	BNE .BAD
+	INY
+	CPY #16
+	BNE .L1
+	LDA #1
+	RTS
+.BAD:
+	LDA #0
+	RTS
+
+	.ifdef DEBUG
+	BRK			; Catch runaway execution
+	.endif
+
+SRAMWIPE:
+	;; Wipes the PRG RAM located at $6000-7FFF and places a new header/footer
+	;; Input: none
+	;; Clobbers: A X Y
+	LDA #$00
+	STA <TEMPADDR
+	LDA #$60
+	STA <TEMPADDR+1		; Set TEMPADDR to $6000
+
+	LDA #$00
+	TAX			; Clear A/X
+.L1:
+	STA [TEMPADDR], Y
+	INY
+	BNE .L1			; Wipe PRG RAM
+
+	INC <TEMPADDR+1
+	INX
+	CPX #$20
+	BNE .L1
+
+	LDA #$00
+	STA <CPUCADDR
+	LDA #$60
+	STA <CPUCADDR+1
+	LDA #0
+	STA <CPUCLEN
+	LDA #16
+	STA <CPUCLEN+1
+	LDA #LOW(SRAMHEADERTEXT)
+	STA <CPUCINPUT
+	LDA #HIGH(SRAMHEADERTEXT)
+	STA <CPUCINPUT+1
+	JSR CPUCOPY		; Write header to PRG RAM
+
+	LDA #$F0
+	STA <CPUCADDR
+	LDA #$7F
+	STA <CPUCADDR+1
+	LDA #0
+	STA <CPUCLEN
+	LDA #16
+	STA <CPUCLEN+1
+	LDA #LOW(SRAMFOOTERTEXT)
+	STA <CPUCINPUT
+	LDA #HIGH(SRAMFOOTERTEXT)
+	STA <CPUCINPUT+1
+	JSR CPUCOPY		; Write footer to PRG RAM
+
+	LDA #1
+	STA SRAMMUSIC		; Set the default music value
 
 	RTS
 
@@ -609,7 +722,7 @@ RESETSCR:
 UPDATEPPUCTRL:
 	;; Selects background/sprite pattern tables, nametables, enables/disables NMI
 	;; Input: <BGPT <SPRPT <NT <NMIEN
-	;; Clobbers: A X
+	;; Clobbers: A
 	LDA <NMIEN
 	AND #NMI_EN
 	STA <TEMP		; Bit 7 - NMI enable toggle
@@ -633,7 +746,7 @@ UPDATEPPUCTRL:
 	ORA <TEMP
 	STA <TEMP		; Bits 1 and 0 - Nametable selection
 
-	LDX PPUSTATUS		; Read PPUSTATUS to clear vblank
+	BIT PPUSTATUS		; Read PPUSTATUS to clear vblank
 	STA PPUCTRL		; Write combined bitfield to PPUCTRL
 
 	RTS
