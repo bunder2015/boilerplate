@@ -100,15 +100,6 @@ MAINMENU:
 RETMAINMENU:
 	; We return here from the options screen since the main menu screen should already be
 	; drawn from the initial startup
-	LDA #$58
-	STA SPR1X
-	LDA #$90
-	STA SPR1Y
-	LDA #$01
-	STA SPR1TILE
-	LDA #%00000000
-	STA SPR1ATTR		; Draw a basic cursor sprite
-
 	LDA #0
 	STA <BGPT		; Select BG pattern table 0
 	LDA #SPR_PT1
@@ -121,21 +112,22 @@ RETMAINMENU:
 	STA <SCROLLX
 	STA <SCROLLY		; Set initial scroll to top left corner
 
-	JSR SHOWSAVEICON
+	LDA <SKIPSRAMTEST
+	BNE .SKIPSRAMTEST	; Skip test if we have already run it
+
+	JSR SHOWSAVEICON	; Show the save icon while PRG RAM is active
 
 	LDA #0
 	STA <MMCRAM
 	JSR UPDATEMMC1PRG	; Enable PRG RAM
 
-	LDA <SKIPSRAMTEST
-	BNE .SRAMTESTDONE
-
 	JSR SRAMTESTA		; Verify header and footer
 	BNE .AOK
-	;; TODO - checksum saved data when we get more data
+	;; TODO - additional tests here (checksum/etc)
+
 	; We failed a test, wipe PRG RAM
-	JSR SHOWERRORICON
-	JSR SRAMWIPE		; Wipe PRG RAM if bad
+	JSR SHOWERRORICON	; Show the error icon
+	JSR SRAMWIPE		; Wipe PRG RAM
 .AOK:
 	LDA SRAMMUSIC
 	AND #%00000001
@@ -147,7 +139,21 @@ RETMAINMENU:
 	LDA #MMC1_PRGRAM_DIS
 	STA <MMCRAM
 	JSR UPDATEMMC1PRG	; Disable PRG RAM until we need it again
-	JSR HIDESAVEICON
+
+	JSR HIDESAVEICON	; Hide the save icon
+
+	LDA #1
+	STA <SKIPSRAMTEST	; Mark tests as done so we can skip them if we run the main menu again
+
+.SKIPSRAMTEST:
+	LDA #$58
+	STA SPR1X
+	LDA #$90
+	STA SPR1Y
+	LDA #$01
+	STA SPR1TILE
+	LDA #%00000000
+	STA SPR1ATTR		; Draw a basic cursor sprite
 
 	LDA #15
 	STA <WAITFRAMES
@@ -211,9 +217,6 @@ NEWGAME:
 	LDA #0
 	STA <NT			; Select nametable 0
 	JSR UPDATEPPUCTRL	; Update PPU controls
-
-	LDA #1
-	STA <SKIPSRAMTEST
 
 	LDA #5
 	STA <WAITFRAMES
@@ -403,8 +406,7 @@ OPTIONS:
 	CMP #$A0		; Check if the cursor is in the bottom position
 	BNE .DONE
 
-	LDA #1
-	STA <SKIPSRAMTEST
+	JSR SHOWSAVEICON
 
 	LDA #0
 	STA <MMCRAM
@@ -416,6 +418,8 @@ OPTIONS:
 	LDA #MMC1_PRGRAM_DIS
 	STA <MMCRAM
 	JSR UPDATEMMC1PRG	; Disable PRG RAM
+
+	JSR HIDESAVEICON
 
 	;; TODO - Save options
 
@@ -470,7 +474,7 @@ MENUPALS:
 	.db $0F,$13,$10,$00	; SPR palette 0
 	.db $0F,$15,$10,$00	; SPR palette 1
 	.db $0F,$30,$10,$00	; SPR palette 2
-	.db $0F,$11,$16,$00	; SPR palette 3
+	.db $0F,$11,$16,$10	; SPR palette 3
 
 MENUTEXT:
 	.db "BOILER PLATE!"

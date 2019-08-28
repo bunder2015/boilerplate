@@ -535,6 +535,8 @@ CLEARSPR:
 	INX
 	BNE .L1
 
+	JSR VBWAIT
+
 	RTS
 
 	.ifdef DEBUG
@@ -569,7 +571,7 @@ HIDESAVEICON:
 	;; Removes the save icon from the screen
 	;; Input: None
 	;; Clobbers: A Y
-	LDA #0
+	LDA #$FF
 	LDY #0
 .L1:
 	STA SPR60Y, Y
@@ -836,6 +838,52 @@ SRAMWIPE:
 	BRK			; Catch runaway execution
 	.endif
 
+UPDATEMMC1CHR0:
+	;; Selects the first CHR ROM bank
+	;; Input: <MMCCHR0
+	;; Clobbers: A
+	LDA <MMCCHR0
+	AND #MMC1_CHR_BANKS
+
+	STA MMC1CHR0
+	LSR A
+	STA MMC1CHR0
+	LSR A
+	STA MMC1CHR0
+	LSR A
+	STA MMC1CHR0
+	LSR A
+	STA MMC1CHR0		; Write bitfield to MMC1CHR0
+
+	RTS
+
+	.ifdef DEBUG
+	BRK			; Catch runaway execution
+	.endif
+
+UPDATEMMC1CHR1:
+	;; Selects the second CHR ROM bank
+	;; Input: <MMCCHR1
+	;; Clobbers: A
+	LDA <MMCCHR1
+	AND #MMC1_CHR_BANKS
+
+	STA MMC1CHR1
+	LSR A
+	STA MMC1CHR1
+	LSR A
+	STA MMC1CHR1
+	LSR A
+	STA MMC1CHR1
+	LSR A
+	STA MMC1CHR1		; Write bitfield to MMC1CHR1
+
+	RTS
+
+	.ifdef DEBUG
+	BRK			; Catch runaway execution
+	.endif
+
 UPDATEMMC1CTRL:
 	;; Sets PRG ROM and CHR ROM bank modes and nametable mirroring mode
 	;; Input: <MMCCHRMODE <MMCPRGMODE <MMCMIRROR
@@ -892,52 +940,6 @@ UPDATEMMC1PRG:
 	STA MMC1PRG
 	LSR A
 	STA MMC1PRG		; Write combined bitfield to MMC1PRG
-
-	RTS
-
-	.ifdef DEBUG
-	BRK			; Catch runaway execution
-	.endif
-
-UPDATEMMC1CHR0:
-	;; Selects the first CHR ROM bank
-	;; Input: <MMCCHR0
-	;; Clobbers: A
-	LDA <MMCCHR0
-	AND #MMC1_CHR_BANKS
-
-	STA MMC1CHR0
-	LSR A
-	STA MMC1CHR0
-	LSR A
-	STA MMC1CHR0
-	LSR A
-	STA MMC1CHR0
-	LSR A
-	STA MMC1CHR0		; Write bitfield to MMC1CHR0
-
-	RTS
-
-	.ifdef DEBUG
-	BRK			; Catch runaway execution
-	.endif
-
-UPDATEMMC1CHR1:
-	;; Selects the second CHR ROM bank
-	;; Input: <MMCCHR1
-	;; Clobbers: A
-	LDA <MMCCHR1
-	AND #MMC1_CHR_BANKS
-
-	STA MMC1CHR1
-	LSR A
-	STA MMC1CHR1
-	LSR A
-	STA MMC1CHR1
-	LSR A
-	STA MMC1CHR1
-	LSR A
-	STA MMC1CHR1		; Write bitfield to MMC1CHR1
 
 	RTS
 
