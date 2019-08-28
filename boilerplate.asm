@@ -86,6 +86,8 @@ SCROLLX:
 	.ds 1			; Scroll position X
 SCROLLY:
 	.ds 1			; Scroll position Y
+SKIPSRAMTEST:
+	.ds 1			; Skip PRG RAM test
 SPRCROP:
 	.ds 1			; Leftmost 8px SPR crop
 SPREN:

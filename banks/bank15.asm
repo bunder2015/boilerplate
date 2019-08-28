@@ -450,11 +450,11 @@ DBGTEXT6:
 
 	.endif
 
-SRAMHEADERTEXT:
-	.db "THERMOTELEPHONIC"
-
 SRAMFOOTERTEXT:
 	.db "DISCOMBOBULATION"
+
+SRAMHEADERTEXT:
+	.db "THERMOTELEPHONIC"
 
 	.code
 	.bank 31
@@ -565,6 +565,26 @@ CPUCOPY:
 	BRK			; Catch runaway execution
 	.endif
 
+HIDESAVEICON:
+	;; Removes the save icon from the screen
+	;; Input: None
+	;; Clobbers: A Y
+	LDA #0
+	LDY #0
+.L1:
+	STA SPR60Y, Y
+	INY
+	CPY #16
+	BNE .L1
+
+	JSR VBWAIT
+
+	RTS
+
+	.ifdef DEBUG
+	BRK			; Catch runaway execution
+	.endif
+
 PPUCOPY:
 	;; Copies lengths of data from the CPU to the PPU
 	;; Input: <PPUCADDR <PPUCLEN <PPUCINPUT
@@ -639,6 +659,102 @@ RESETSCR:
 	BRK			; Catch runaway execution
 	.endif
 
+SHOWERRORICON:
+	;; Shows an error icon on the screen
+	;; Input: None
+	;; Clobbers: A
+	LDA #$D8
+	STA SPR56X
+	LDA #$D8
+	STA SPR56Y
+	LDA #$E0
+	STA SPR56TILE
+	LDA #%00000011
+	STA SPR56ATTR		; Top left
+
+	LDA #$E0
+	STA SPR57X
+	LDA #$D8
+	STA SPR57Y
+	LDA #$E1
+	STA SPR57TILE
+	LDA #%00000011
+	STA SPR57ATTR		; Top right
+
+	LDA #$D8
+	STA SPR58X
+	LDA #$E0
+	STA SPR58Y
+	LDA #$F0
+	STA SPR58TILE
+	LDA #%00000011
+	STA SPR58ATTR		; Bottom left
+
+	LDA #$E0
+	STA SPR59X
+	LDA #$E0
+	STA SPR59Y
+	LDA #$F1
+	STA SPR59TILE
+	LDA #%00000011
+	STA SPR59ATTR		; Bottom right
+
+	JSR VBWAIT
+
+	RTS
+
+	.ifdef DEBUG
+	BRK			; Catch runaway execution
+	.endif
+
+SHOWSAVEICON:
+	;; Shows a save icon on the screen
+	;; Input: None
+	;; Clobbers: A
+	LDA #$E8
+	STA SPR60X
+	LDA #$D8
+	STA SPR60Y
+	LDA #$E2
+	STA SPR60TILE
+	LDA #%00000011
+	STA SPR60ATTR		; Top left
+
+	LDA #$F0
+	STA SPR61X
+	LDA #$D8
+	STA SPR61Y
+	LDA #$E3
+	STA SPR61TILE
+	LDA #%00000011
+	STA SPR61ATTR		; Top right
+
+	LDA #$E8
+	STA SPR62X
+	LDA #$E0
+	STA SPR62Y
+	LDA #$F2
+	STA SPR62TILE
+	LDA #%00000011
+	STA SPR62ATTR		; Bottom left
+
+	LDA #$F0
+	STA SPR63X
+	LDA #$E0
+	STA SPR63Y
+	LDA #$F3
+	STA SPR63TILE
+	LDA #%00000011
+	STA SPR63ATTR		; Bottom right
+
+	JSR VBWAIT
+
+	RTS
+
+	.ifdef DEBUG
+	BRK			; Catch runaway execution
+	.endif
+
 SRAMTESTA:
 	;; Verifies the PRG RAM header and footer, returns 1 on success
 	;; Input: none
@@ -671,7 +787,8 @@ SRAMWIPE:
 	STA <TEMPADDR+1		; Set TEMPADDR to $6000
 
 	LDA #$00
-	TAX			; Clear A/X
+	TAX
+	TAY			; Clear A/X/Y
 .L1:
 	STA [TEMPADDR], Y
 	INY
@@ -712,93 +829,6 @@ SRAMWIPE:
 
 	LDA #1
 	STA SRAMMUSIC		; Set the default music value
-
-	RTS
-
-	.ifdef DEBUG
-	BRK			; Catch runaway execution
-	.endif
-
-UPDATEPPUCTRL:
-	;; Selects background/sprite pattern tables, nametables, enables/disables NMI
-	;; Input: <BGPT <SPRPT <NT <NMIEN
-	;; Clobbers: A
-	LDA <NMIEN
-	AND #NMI_EN
-	STA <TEMP		; Bit 7 - NMI enable toggle
-
-	; TODO - bit 5
-
-	LDA <BGPT
-	AND #BG_PT1
-	ORA <TEMP
-	STA <TEMP		; Bit 4 - BG pattern table selection
-
-	LDA <SPRPT
-	AND #SPR_PT1
-	ORA <TEMP
-	STA <TEMP		; Bit 3 - SPR pattern table selection
-
-	; TODO - bit 2
-
-	LDA <NT
-	AND #NT_SEL3
-	ORA <TEMP
-	STA <TEMP		; Bits 1 and 0 - Nametable selection
-
-	BIT PPUSTATUS		; Read PPUSTATUS to clear vblank
-	STA PPUCTRL		; Write combined bitfield to PPUCTRL
-
-	RTS
-
-	.ifdef DEBUG
-	BRK			; Catch runaway execution
-	.endif
-
-UPDATEPPUMASK:
-	;; Sets b+w/colour modes, enables leftmost 8px cropping, enables rendering, and colour emphasis
-	;; Input: <COLOUREN <BGCROP <SPRCROP <BGEN <SPREN <CEMPHR <CEMPHG <CEMPHB
-	;; Clobbers: A
-	LDA <CEMPHB
-	AND #CLR_EMPH_BLUE
-	STA <TEMP		; Bit 7 - Colour emphasis blue
-
-	LDA <CEMPHG
-	AND #CLR_EMPH_GREEN
-	ORA <TEMP
-	STA <TEMP		; Bit 6 - Colour emphasis green
-
-	LDA <CEMPHR
-	AND #CLR_EMPH_RED
-	ORA <TEMP
-	STA <TEMP		; Bit 5 - Colour emphasis red
-
-	LDA <SPREN
-	AND #SPR_REND_EN
-	ORA <TEMP
-	STA <TEMP		; Bit 4 - SPR rendering enable
-
-	LDA <BGEN
-	AND #BG_REND_EN
-	ORA <TEMP
-	STA <TEMP		; Bit 3 - BG rendering enable
-
-	LDA <SPRCROP
-	AND #SPR_REND_CROP
-	ORA <TEMP
-	STA <TEMP		; Bit 2 - SPR leftmost 8px cropping
-
-	LDA <BGCROP
-	AND #BG_REND_CROP
-	ORA <TEMP
-	STA <TEMP		; Bit 1 - BG leftmost 8px cropping
-
-	LDA <COLOUREN
-	AND #CLR_EN
-	ORA <TEMP
-	STA <TEMP		; Bit 0 - Colour enable
-
-	STA PPUMASK		; Write combined bitfield to PPUMASK
 
 	RTS
 
@@ -908,6 +938,93 @@ UPDATEMMC1CHR1:
 	STA MMC1CHR1
 	LSR A
 	STA MMC1CHR1		; Write bitfield to MMC1CHR1
+
+	RTS
+
+	.ifdef DEBUG
+	BRK			; Catch runaway execution
+	.endif
+
+UPDATEPPUCTRL:
+	;; Selects background/sprite pattern tables, nametables, enables/disables NMI
+	;; Input: <BGPT <SPRPT <NT <NMIEN
+	;; Clobbers: A
+	LDA <NMIEN
+	AND #NMI_EN
+	STA <TEMP		; Bit 7 - NMI enable toggle
+
+	; TODO - bit 5
+
+	LDA <BGPT
+	AND #BG_PT1
+	ORA <TEMP
+	STA <TEMP		; Bit 4 - BG pattern table selection
+
+	LDA <SPRPT
+	AND #SPR_PT1
+	ORA <TEMP
+	STA <TEMP		; Bit 3 - SPR pattern table selection
+
+	; TODO - bit 2
+
+	LDA <NT
+	AND #NT_SEL3
+	ORA <TEMP
+	STA <TEMP		; Bits 1 and 0 - Nametable selection
+
+	BIT PPUSTATUS		; Read PPUSTATUS to clear vblank
+	STA PPUCTRL		; Write combined bitfield to PPUCTRL
+
+	RTS
+
+	.ifdef DEBUG
+	BRK			; Catch runaway execution
+	.endif
+
+UPDATEPPUMASK:
+	;; Sets b+w/colour modes, enables leftmost 8px cropping, enables rendering, and colour emphasis
+	;; Input: <COLOUREN <BGCROP <SPRCROP <BGEN <SPREN <CEMPHR <CEMPHG <CEMPHB
+	;; Clobbers: A
+	LDA <CEMPHB
+	AND #CLR_EMPH_BLUE
+	STA <TEMP		; Bit 7 - Colour emphasis blue
+
+	LDA <CEMPHG
+	AND #CLR_EMPH_GREEN
+	ORA <TEMP
+	STA <TEMP		; Bit 6 - Colour emphasis green
+
+	LDA <CEMPHR
+	AND #CLR_EMPH_RED
+	ORA <TEMP
+	STA <TEMP		; Bit 5 - Colour emphasis red
+
+	LDA <SPREN
+	AND #SPR_REND_EN
+	ORA <TEMP
+	STA <TEMP		; Bit 4 - SPR rendering enable
+
+	LDA <BGEN
+	AND #BG_REND_EN
+	ORA <TEMP
+	STA <TEMP		; Bit 3 - BG rendering enable
+
+	LDA <SPRCROP
+	AND #SPR_REND_CROP
+	ORA <TEMP
+	STA <TEMP		; Bit 2 - SPR leftmost 8px cropping
+
+	LDA <BGCROP
+	AND #BG_REND_CROP
+	ORA <TEMP
+	STA <TEMP		; Bit 1 - BG leftmost 8px cropping
+
+	LDA <COLOUREN
+	AND #CLR_EN
+	ORA <TEMP
+	STA <TEMP		; Bit 0 - Colour enable
+
+	STA PPUMASK		; Write combined bitfield to PPUMASK
 
 	RTS
 

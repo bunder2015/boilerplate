@@ -97,27 +97,9 @@ MAINMENU:
 	STA <PPUCINPUT+1
 	JSR PPUCOPY		; Load menu BG attributes into PPU
 
-	LDA #0
-	STA <MMCRAM
-	JSR UPDATEMMC1PRG	; Enable PRG RAM
-
-	JSR SRAMTESTA		; Verify header and footer
-	BNE .AOK
-	;; TODO - checksum saved data when we get more data
-	JSR SRAMWIPE		; Wipe PRG RAM if bad
-.AOK:
-	LDA SRAMMUSIC
-	AND #%00000001
-	STA MUSICEN		; Load music toggle from PRG RAM and store to WRAM
-	BEQ .SRAMTESTDONE
-	;; TODO - start music
-
-.SRAMTESTDONE:
-	LDA #MMC1_PRGRAM_DIS
-	STA <MMCRAM
-	JSR UPDATEMMC1PRG	; Disable PRG RAM until we need it again
-
 RETMAINMENU:
+	; We return here from the options screen since the main menu screen should already be
+	; drawn from the initial startup
 	LDA #$58
 	STA SPR1X
 	LDA #$90
@@ -139,9 +121,37 @@ RETMAINMENU:
 	STA <SCROLLX
 	STA <SCROLLY		; Set initial scroll to top left corner
 
-	LDA #30
+	JSR SHOWSAVEICON
+
+	LDA #0
+	STA <MMCRAM
+	JSR UPDATEMMC1PRG	; Enable PRG RAM
+
+	LDA <SKIPSRAMTEST
+	BNE .SRAMTESTDONE
+
+	JSR SRAMTESTA		; Verify header and footer
+	BNE .AOK
+	;; TODO - checksum saved data when we get more data
+	; We failed a test, wipe PRG RAM
+	JSR SHOWERRORICON
+	JSR SRAMWIPE		; Wipe PRG RAM if bad
+.AOK:
+	LDA SRAMMUSIC
+	AND #%00000001
+	STA MUSICEN		; Load music toggle from PRG RAM and store to WRAM
+	BEQ .SRAMTESTDONE
+	;; TODO - start music
+
+.SRAMTESTDONE:
+	LDA #MMC1_PRGRAM_DIS
+	STA <MMCRAM
+	JSR UPDATEMMC1PRG	; Disable PRG RAM until we need it again
+	JSR HIDESAVEICON
+
+	LDA #15
 	STA <WAITFRAMES
-	JSR VBWAIT		; Wait for 30 frames
+	JSR VBWAIT		; Wait for 15 frames
 
 .MENULOOP:
 	LDA <JOY1IN
@@ -201,6 +211,9 @@ NEWGAME:
 	LDA #0
 	STA <NT			; Select nametable 0
 	JSR UPDATEPPUCTRL	; Update PPU controls
+
+	LDA #1
+	STA <SKIPSRAMTEST
 
 	LDA #5
 	STA <WAITFRAMES
@@ -316,9 +329,9 @@ OPTIONS:
 	STA <NT			; Select nametable 1
 	JSR UPDATEPPUCTRL	; Update PPU controls
 
-	LDA #5
+	LDA #15
 	STA <WAITFRAMES
-	JSR VBWAIT		; Wait for next vblank
+	JSR VBWAIT		; Wait for 15 frames
 
 .OPTIONSLOOP:
 	; 30,58 "music" cursor position
@@ -390,6 +403,9 @@ OPTIONS:
 	CMP #$A0		; Check if the cursor is in the bottom position
 	BNE .DONE
 
+	LDA #1
+	STA <SKIPSRAMTEST
+
 	LDA #0
 	STA <MMCRAM
 	JSR UPDATEMMC1PRG	; Enable PRG RAM
@@ -454,7 +470,7 @@ MENUPALS:
 	.db $0F,$13,$10,$00	; SPR palette 0
 	.db $0F,$15,$10,$00	; SPR palette 1
 	.db $0F,$30,$10,$00	; SPR palette 2
-	.db $0F,$30,$10,$00	; SPR palette 3
+	.db $0F,$11,$16,$00	; SPR palette 3
 
 MENUTEXT:
 	.db "BOILER PLATE!"
