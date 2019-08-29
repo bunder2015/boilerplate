@@ -8,7 +8,7 @@
 	.endif
 
 MAINMENU:
-	LDA #0
+	LDA #REND_DIS
 	STA <SPREN
 	STA <BGEN
 	JSR UPDATEPPUMASK	; Disable rendering
@@ -161,6 +161,10 @@ RETMAINMENU:
 
 .MENULOOP:
 	LDA <JOY1IN
+	BNE .DOWN
+	JMP .DONE		; Skip loop if player 1 is not pressing buttons
+.DOWN:
+	LDA <JOY1IN
 	AND #BUTTON_DOWN	; Check if player 1 is pressing down
 	BEQ .UP
 	LDA SPR1Y
@@ -284,8 +288,7 @@ OPTIONS:
 	STA SPR1ATTR		; Draw the options cursor
 
 	LDA MUSICEN
-	CMP #1
-	BNE .MUSICOFF
+	BEQ .MUSICOFF
 	LDA #$78
 	STA SPR2X
 	JMP .MUSICDONE
@@ -307,6 +310,10 @@ OPTIONS:
 .OPTIONSLOOP:
 	; 30,58 "music" cursor position
 	; 20,A0 "return" cursor position
+	LDA <JOY1IN
+	BNE .DOWN
+	JMP .DONE		; Skip loop if player 1 is not pressing buttons
+.DOWN:
 	LDA <JOY1IN
 	AND #BUTTON_DOWN	; Check if player 1 is pressing down
 	BEQ .UP
