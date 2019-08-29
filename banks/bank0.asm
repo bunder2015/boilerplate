@@ -122,15 +122,21 @@ RETMAINMENU:
 	JSR UPDATEMMC1PRG	; Enable PRG RAM
 
 	JSR SRAMTESTA		; Verify header and footer
-	BNE .AOK
+	BNE .SRAMTESTRUNC
+	JMP .SRAMTESTFAIL
+
+.SRAMTESTRUNC:
+	JSR SRAMTESTC		; Verify option variable bounds
+	BNE .SRAMTESTPASS
 	;; TODO - additional tests here (checksum/etc)
 
+.SRAMTESTFAIL:
 	; We failed a test, wipe PRG RAM
 	JSR SHOWERRORICON	; Show the error icon
 	JSR SRAMWIPE		; Wipe PRG RAM
-.AOK:
+
+.SRAMTESTPASS:
 	LDA SRAMMUSIC
-	AND #%00000001
 	STA MUSICEN		; Load music toggle from PRG RAM and store to WRAM
 	BEQ .SRAMTESTDONE
 	;; TODO - start music
@@ -228,11 +234,11 @@ OPTIONS:
 
 	LDA #$25
 	STA <PPUCADDR
-	LDA #$68
+	LDA #$66
 	STA <PPUCADDR+1
 	LDA #0
 	STA <PPUCLEN
-	LDA #15
+	LDA #19
 	STA <PPUCLEN+1
 	LDA #LOW(OPTIONSTEXT1)
 	STA <PPUCINPUT
@@ -278,7 +284,7 @@ OPTIONS:
 	STA <NT			; Select nametable 1
 	JSR UPDATEPPUCTRL	; Update PPU controls
 
-	LDA #$30
+	LDA #$20
 	STA SPR1X
 	LDA #$58
 	STA SPR1Y
@@ -289,11 +295,11 @@ OPTIONS:
 
 	LDA MUSICEN
 	BEQ .MUSICOFF
-	LDA #$78
+	LDA #$70
 	STA SPR2X
 	JMP .MUSICDONE
 .MUSICOFF:
-	LDA #$98
+	LDA #$A0
 	STA SPR2X
 .MUSICDONE:
 	LDA #$58
@@ -308,7 +314,7 @@ OPTIONS:
 	JSR VBWAIT		; Wait for 15 frames
 
 .OPTIONSLOOP:
-	; 30,58 "music" cursor position
+	; 20,58 "music" cursor position
 	; 20,A0 "return" cursor position
 	LDA <JOY1IN
 	BNE .DOWN
@@ -332,14 +338,14 @@ OPTIONS:
 	LDA SPR1Y
 	CMP #$A0		; Check if the cursor is in the bottom position
 	BNE .LMUSIC
-	LDA #$30
+	LDA #$20
 	STA SPR1X
 	LDA #$58
 	STA SPR1Y		; Move cursor up
 	JMP .DONE
 .LMUSIC:
-	; 78,58 "on" music cursor position
-	; 98,58 "off" music cursor position
+	; 70,58 "on" music cursor position
+	; A0,58 "off" music cursor position
 	LDA <JOY1IN
 	AND #BUTTON_LEFT	; Check if player 1 is pressing left
 	BEQ .RMUSIC
@@ -347,13 +353,13 @@ OPTIONS:
 	CMP #$58		; Check if the cursor is in the top position
 	BNE .RMUSIC
 	LDA SPR2X
-	CMP #$98		; Check if the music cursor is in the right position
+	CMP #$A0		; Check if the music cursor is in the right position
 	BNE .RMUSIC
 	LDA #1
 	STA MUSICEN
 	;; TODO - Enable music
 
-	LDA #$78
+	LDA #$70
 	STA SPR2X		; Move music cursor left
 	JMP .DONE
 .RMUSIC:
@@ -364,13 +370,13 @@ OPTIONS:
 	CMP #$58		; Check if the cursor is in the top position
 	BNE .STRETURN
 	LDA SPR2X
-	CMP #$78		; Check if the music cursor is in the left position
+	CMP #$70		; Check if the music cursor is in the left position
 	BNE .STRETURN
 	LDA #0
 	STA MUSICEN
 	;; TODO - Disable music
 
-	LDA #$98
+	LDA #$A0
 	STA SPR2X		; Move music cursor right
 	JMP .DONE
 .STRETURN:
@@ -469,7 +475,7 @@ OPTIONSATTR:
 OPTIONSTEXT:
 	.db "- Options -"
 OPTIONSTEXT1:
-	.db "Music:  On  Off"
+	.db "Music:    On    Off"
 OPTIONSTEXT2:
 	.db "Return to main menu"
 

@@ -792,6 +792,23 @@ SRAMTESTA:
 	BRK			; Catch runaway execution
 	.endif
 
+SRAMTESTC:
+	;; Verifies the PRG RAM option variable bounds, returns 1 on success
+	;; Input: none
+	;; Clobbers: A
+	LDA SRAMMUSIC
+	CMP #2			; SRAMMUSIC range is 0-1
+	BCS .BAD		; Carry will be set if higher than 1
+	LDA #1
+	RTS
+.BAD:
+	LDA #0
+	RTS
+
+	.ifdef DEBUG
+	BRK			; Catch runaway execution
+	.endif
+
 SRAMWIPE:
 	;; Wipes the PRG RAM located at $6000-7FFF and places a new header/footer
 	;; Input: none
