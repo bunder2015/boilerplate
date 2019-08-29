@@ -5,7 +5,9 @@
 	.ifdef DEBUG
 	BRK			; Catch runaway execution
 	.db "15A"
+	.endif
 
+	.ifdef DEBUG
 BREAK:
 	;; BRK debugger - store debug registers to memory, stop game execution, then display registers
 	STY <DBGY		; Stash Y register
@@ -24,7 +26,7 @@ BREAK:
 	DEC <DBGPC+1		; Return program counter to address that caused the BRK
 
 	;; TODO - stop sound
-	LDA #0
+	LDA #REND_DIS
 	STA <SPREN
 	STA <BGEN
 	JSR UPDATEPPUMASK	; Disable rendering
@@ -147,7 +149,7 @@ BREAK:
 	STA <PRINTB
 	JSR PRINTBYTE
 
-	LDA #0
+	LDA #NT_SEL0
 	STA <NT			; Select nametable 0
 	JSR UPDATEPPUCTRL
 
@@ -450,6 +452,17 @@ DBGTEXT6:
 
 	.endif
 
+STARTNEWGAME:
+	LDA #MMC1_PRG_BANK1
+	STA <MMCPRG
+	JSR UPDATEMMC1PRG
+
+	JMP NEWGAME
+
+	.ifdef DEBUG
+	BRK			; Catch runaway execution
+	.endif
+
 SRAMFOOTERTEXT:
 	.db "DISCOMBOBULATION"
 
@@ -469,7 +482,7 @@ CLEARSCREEN:
 	;; Clears the tiles on the screen and all sprites
 	;; Input: none
 	;; Clobbers: A X Y
-	LDA #0
+	LDA #REND_DIS
 	STA <SPREN
 	STA <BGEN
 	JSR UPDATEPPUMASK	; Disable rendering
@@ -671,7 +684,7 @@ SHOWERRORICON:
 	STA SPR56Y
 	LDA #$E0
 	STA SPR56TILE
-	LDA #%00000011
+	LDA #SPR_PALETTE3
 	STA SPR56ATTR		; Top left
 
 	LDA #$E0
@@ -680,7 +693,7 @@ SHOWERRORICON:
 	STA SPR57Y
 	LDA #$E1
 	STA SPR57TILE
-	LDA #%00000011
+	LDA #SPR_PALETTE3
 	STA SPR57ATTR		; Top right
 
 	LDA #$D8
@@ -689,7 +702,7 @@ SHOWERRORICON:
 	STA SPR58Y
 	LDA #$F0
 	STA SPR58TILE
-	LDA #%00000011
+	LDA #SPR_PALETTE3
 	STA SPR58ATTR		; Bottom left
 
 	LDA #$E0
@@ -698,7 +711,7 @@ SHOWERRORICON:
 	STA SPR59Y
 	LDA #$F1
 	STA SPR59TILE
-	LDA #%00000011
+	LDA #SPR_PALETTE3
 	STA SPR59ATTR		; Bottom right
 
 	JSR VBWAIT
@@ -719,7 +732,7 @@ SHOWSAVEICON:
 	STA SPR60Y
 	LDA #$E2
 	STA SPR60TILE
-	LDA #%00000011
+	LDA #SPR_PALETTE3
 	STA SPR60ATTR		; Top left
 
 	LDA #$F0
@@ -728,7 +741,7 @@ SHOWSAVEICON:
 	STA SPR61Y
 	LDA #$E3
 	STA SPR61TILE
-	LDA #%00000011
+	LDA #SPR_PALETTE3
 	STA SPR61ATTR		; Top right
 
 	LDA #$E8
@@ -737,7 +750,7 @@ SHOWSAVEICON:
 	STA SPR62Y
 	LDA #$F2
 	STA SPR62TILE
-	LDA #%00000011
+	LDA #SPR_PALETTE3
 	STA SPR62ATTR		; Bottom left
 
 	LDA #$F0
@@ -746,7 +759,7 @@ SHOWSAVEICON:
 	STA SPR63Y
 	LDA #$F3
 	STA SPR63TILE
-	LDA #%00000011
+	LDA #SPR_PALETTE3
 	STA SPR63ATTR		; Bottom right
 
 	JSR VBWAIT
@@ -1138,20 +1151,20 @@ RESET:
 
 .MMC1INIT:
 	LDA #MMC1_CHR_MODE1
-	STA <MMCCHRMODE		; CHR mode 0 (2x4k switchable pattern tables)
+	STA <MMCCHRMODE		; CHR mode 1 (2x4k switchable pattern tables)
 	LDA #MMC1_MIRROR_V
 	STA <MMCMIRROR		; Vertical mirroring selected
 	LDA #MMC1_PRG_MODE3
 	STA <MMCPRGMODE		; PRG mode 3 (bank 15 fixed to CPU $C000, switchable $8000)
 	JSR UPDATEMMC1CTRL
 
-	LDA #0
+	LDA #MMC1_PRG_BANK0
 	STA <MMCPRG		; PRG bank 0 selected at CPU $8000
 	LDA #MMC1_PRGRAM_DIS
 	STA <MMCRAM		; PRG RAM disabled
 	JSR UPDATEMMC1PRG
 
-	LDA #0
+	LDA #MMC1_CHR_BANK0
 	STA <MMCCHR0		; CHR bank 0 selected at PPU $0000
 	JSR UPDATEMMC1CHR0
 
@@ -1175,7 +1188,7 @@ IRQ:
 	STA <DBGA		; Stash accumulator
 	PLA			; Pull processor status from the stack
 	PHA			; Return processor status to the stack
-	AND #%00010000		; Check for "B flag"
+	AND #CPU_FLAG_B		; Check for "B flag"
 	BEQ .NOBRK		; Branch if not set
 	JMP BREAK		; Jump to break handler
 .NOBRK:

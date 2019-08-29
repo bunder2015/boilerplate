@@ -100,11 +100,11 @@ MAINMENU:
 RETMAINMENU:
 	; We return here from the options screen since the main menu screen should already be
 	; drawn from the initial startup
-	LDA #0
+	LDA #BG_PT0
 	STA <BGPT		; Select BG pattern table 0
 	LDA #SPR_PT1
 	STA <SPRPT		; Select sprite pattern table 1
-	LDA #0
+	LDA #NT_SEL0
 	STA <NT			; Select nametable 0
 	JSR UPDATEPPUCTRL	; Update PPU controls
 
@@ -117,7 +117,7 @@ RETMAINMENU:
 
 	JSR SHOWSAVEICON	; Show the save icon while PRG RAM is active
 
-	LDA #0
+	LDA #MMC1_PRGRAM_EN
 	STA <MMCRAM
 	JSR UPDATEMMC1PRG	; Enable PRG RAM
 
@@ -152,7 +152,7 @@ RETMAINMENU:
 	STA SPR1Y
 	LDA #$01
 	STA SPR1TILE
-	LDA #%00000000
+	LDA #SPR_PALETTE0
 	STA SPR1ATTR		; Draw a basic cursor sprite
 
 	LDA #15
@@ -187,7 +187,7 @@ RETMAINMENU:
 	CMP #$90		; Check if the cursor is in the top position
 	BNE .STOPTS
 	JSR CLEARSCREEN		; Clear screen
-	JMP NEWGAME		; Go to new game
+	JMP STARTNEWGAME	; Go to new game
 .STOPTS:
 	LDA SPR1Y
 	CMP #$A0		; Check if the cursor is in the bottom position
@@ -202,40 +202,8 @@ RETMAINMENU:
 	BRK			; Catch runaway execution
 	.endif
 
-NEWGAME:
-	LDA #0
-	STA <SPREN
-	STA <BGEN
-	JSR UPDATEPPUMASK	; Disable rendering
-
-	;; TODO - Display new game start
-
-	LDA #0
-	STA <BGPT		; Select BG pattern table 0
-	LDA #SPR_PT1
-	STA <SPRPT		; Select sprite pattern table 1
-	LDA #0
-	STA <NT			; Select nametable 0
-	JSR UPDATEPPUCTRL	; Update PPU controls
-
-	LDA #5
-	STA <WAITFRAMES
-	JSR VBWAIT		; Wait for next vblank
-
-.STARTLOOP:
-	;; TODO - Input
-	BRK
-
-.DONE:
-	JSR VBWAIT		; Wait for next vblank
-	JMP .STARTLOOP
-
-	.ifdef DEBUG
-	BRK			; Catch runaway execution
-	.endif
-
 OPTIONS:
-	LDA #0
+	LDA #REND_DIS
 	STA <SPREN
 	STA <BGEN
 	JSR UPDATEPPUMASK	; Disable rendering
@@ -298,13 +266,21 @@ OPTIONS:
 
 	;; TODO - We use the main menus palettes
 
+	LDA #BG_PT0
+	STA <BGPT		; Select BG pattern table 0
+	LDA #SPR_PT1
+	STA <SPRPT		; Select sprite pattern table 1
+	LDA #NT_SEL1
+	STA <NT			; Select nametable 1
+	JSR UPDATEPPUCTRL	; Update PPU controls
+
 	LDA #$30
 	STA SPR1X
 	LDA #$58
 	STA SPR1Y
 	LDA #$01
 	STA SPR1TILE
-	LDA #%00000000
+	LDA #SPR_PALETTE0
 	STA SPR1ATTR		; Draw the options cursor
 
 	LDA MUSICEN
@@ -321,16 +297,8 @@ OPTIONS:
 	STA SPR2Y
 	LDA #$01
 	STA SPR2TILE
-	LDA #$00000001
+	LDA #SPR_PALETTE1
 	STA SPR2ATTR		; Draw the music cursor
-
-	LDA #0
-	STA <BGPT		; Select BG pattern table 0
-	LDA #SPR_PT1
-	STA <SPRPT		; Select sprite pattern table 1
-	LDA #NT_SEL1
-	STA <NT			; Select nametable 1
-	JSR UPDATEPPUCTRL	; Update PPU controls
 
 	LDA #15
 	STA <WAITFRAMES
@@ -408,7 +376,7 @@ OPTIONS:
 
 	JSR SHOWSAVEICON
 
-	LDA #0
+	LDA #MMC1_PRGRAM_EN
 	STA <MMCRAM
 	JSR UPDATEMMC1PRG	; Enable PRG RAM
 
@@ -420,8 +388,6 @@ OPTIONS:
 	JSR UPDATEMMC1PRG	; Disable PRG RAM
 
 	JSR HIDESAVEICON
-
-	;; TODO - Save options
 
 	JSR CLEARSPR
 	JMP RETMAINMENU
