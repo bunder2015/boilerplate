@@ -295,19 +295,29 @@ OPTIONS:
 
 	LDA MUSICEN
 	BEQ .MUSICOFF
-	LDA #$70
-	STA SPR2X
+
+	LDA #LOW(MUSICATTRON)
+	STA <PPUCINPUT
+	LDA #HIGH(MUSICATTRON)
+	STA <PPUCINPUT+1
+
 	JMP .MUSICDONE
 .MUSICOFF:
-	LDA #$A0
-	STA SPR2X
+	LDA #LOW(MUSICATTROFF)
+	STA <PPUCINPUT
+	LDA #HIGH(MUSICATTROFF)
+	STA <PPUCINPUT+1
+
 .MUSICDONE:
-	LDA #$58
-	STA SPR2Y
-	LDA #$01
-	STA SPR2TILE
-	LDA #SPR_PALETTE1
-	STA SPR2ATTR		; Draw the music cursor
+	LDA #$27
+	STA <PPUCADDR
+	LDA #$D4
+	STA <PPUCADDR+1
+	LDA #0
+	STA <PPUCLEN
+	LDA #3
+	STA <PPUCLEN+1
+	JSR PPUCOPY		; Change attributes of music toggle based on state
 
 	LDA #15
 	STA <WAITFRAMES
@@ -344,23 +354,32 @@ OPTIONS:
 	STA SPR1Y		; Move cursor up
 	JMP .DONE
 .LMUSIC:
-	; 70,58 "on" music cursor position
-	; A0,58 "off" music cursor position
 	LDA <JOY1IN
 	AND #BUTTON_LEFT	; Check if player 1 is pressing left
 	BEQ .RMUSIC
 	LDA SPR1Y
 	CMP #$58		; Check if the cursor is in the top position
 	BNE .RMUSIC
-	LDA SPR2X
-	CMP #$A0		; Check if the music cursor is in the right position
+	LDA MUSICEN		; Check if music is disabled
 	BNE .RMUSIC
-	LDA #1
+	LDA #1			; Turn music toggle on
 	STA MUSICEN
 	;; TODO - Enable music
 
-	LDA #$70
-	STA SPR2X		; Move music cursor left
+	LDA #$27
+	STA <PPUCADDR
+	LDA #$D4
+	STA <PPUCADDR+1
+	LDA #0
+	STA <PPUCLEN
+	LDA #3
+	STA <PPUCLEN+1
+	LDA #LOW(MUSICATTRON)
+	STA <PPUCINPUT
+	LDA #HIGH(MUSICATTRON)
+	STA <PPUCINPUT+1
+	JSR PPUCOPY		; Change attributes of music toggle
+
 	JMP .DONE
 .RMUSIC:
 	LDA <JOY1IN
@@ -369,16 +388,28 @@ OPTIONS:
 	LDA SPR1Y
 	CMP #$58		; Check if the cursor is in the top position
 	BNE .STRETURN
-	LDA SPR2X
-	CMP #$70		; Check if the music cursor is in the left position
-	BNE .STRETURN
+	LDA MUSICEN		; Check if music is enabled
+	BEQ .STRETURN
 	LDA #0
-	STA MUSICEN
+	STA MUSICEN		; Turn music toggle off
 	;; TODO - Disable music
 
-	LDA #$A0
-	STA SPR2X		; Move music cursor right
+	LDA #$27
+	STA <PPUCADDR
+	LDA #$D4
+	STA <PPUCADDR+1
+	LDA #0
+	STA <PPUCLEN
+	LDA #3
+	STA <PPUCLEN+1
+	LDA #LOW(MUSICATTROFF)
+	STA <PPUCINPUT
+	LDA #HIGH(MUSICATTROFF)
+	STA <PPUCINPUT+1
+	JSR PPUCOPY		; Change attributes of music toggle
+
 	JMP .DONE
+
 .STRETURN:
 	LDA <JOY1IN
 	AND #BUTTON_START	; Check if player 1 is pressing start
@@ -447,11 +478,11 @@ MENUBG:
 MENUPALS:
 	.db $0F,$30,$10,$00	; BG palette 0
 	.db $0F,$2C,$21,$11	; BG palette 1
-	.db $0F,$30,$10,$00	; BG palette 2
+	.db $0F,$13,$10,$00	; BG palette 2
 	.db $0F,$30,$10,$00	; BG palette 3
 
 	.db $0F,$13,$10,$00	; SPR palette 0
-	.db $0F,$15,$10,$00	; SPR palette 1
+	.db $0F,$30,$10,$00	; SPR palette 1
 	.db $0F,$30,$10,$00	; SPR palette 2
 	.db $0F,$11,$16,$10	; SPR palette 3
 
@@ -461,6 +492,12 @@ MENUTEXT1:
 	.db "New game"
 MENUTEXT2:
 	.db "Options"
+
+MUSICATTRON:
+	.db $20,$00,$00
+
+MUSICATTROFF:
+	.db $00,$80,$20
 
 OPTIONSATTR:
 	.db $00,$00,$00,$00,$00,$00,$00,$00	; Top 2 rows of screen
