@@ -32,10 +32,10 @@ DEBUG				; Comment this line to disable debugging
 	; Zero-page memory $0000-00FF
 	.zp
 
-BGCROP:
-	.ds 1			; Leftmost 8px BG crop
 BGEN:
 	.ds 1			; BG render enable
+BGNOCROP:
+	.ds 1			; BG leftmost 8px crop disable
 BGPT:
 	.ds 1			; BG pattern table to display
 CEMPHB:
@@ -88,10 +88,10 @@ SCROLLY:
 	.ds 1			; Scroll position Y
 SKIPSRAMTEST:
 	.ds 1			; Skip PRG RAM test
-SPRCROP:
-	.ds 1			; Leftmost 8px SPR crop
 SPREN:
 	.ds 1			; SPR render enable
+SPRNOCROP:
+	.ds 1			; SPR leftmost 8px crop disable
 SPRPT:
 	.ds 1			; Sprite pattern table to display
 TEMP:

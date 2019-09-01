@@ -1025,7 +1025,7 @@ UPDATEPPUCTRL:
 
 UPDATEPPUMASK:
 	;; Sets b+w/colour modes, enables leftmost 8px cropping, enables rendering, and colour emphasis
-	;; Input: <COLOUREN <BGCROP <SPRCROP <BGEN <SPREN <CEMPHR <CEMPHG <CEMPHB
+	;; Input: <COLOUREN <BGNOCROP <SPRNOCROP <BGEN <SPREN <CEMPHR <CEMPHG <CEMPHB
 	;; Clobbers: A
 	LDA <CEMPHB
 	AND #CLR_EMPH_BLUE
@@ -1051,13 +1051,13 @@ UPDATEPPUMASK:
 	ORA <TEMP
 	STA <TEMP		; Bit 3 - BG rendering enable
 
-	LDA <SPRCROP
-	AND #SPR_REND_CROP
+	LDA <SPRNOCROP
+	AND #SPR_REND_NOCROP
 	ORA <TEMP
 	STA <TEMP		; Bit 2 - SPR leftmost 8px cropping
 
-	LDA <BGCROP
-	AND #BG_REND_CROP
+	LDA <BGNOCROP
+	AND #BG_REND_NOCROP
 	ORA <TEMP
 	STA <TEMP		; Bit 1 - BG leftmost 8px cropping
 

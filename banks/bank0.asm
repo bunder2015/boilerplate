@@ -11,6 +11,9 @@ MAINMENU:
 	LDA #REND_DIS
 	STA <SPREN
 	STA <BGEN
+	LDA #REND_CROP_DIS
+	STA <BGNOCROP
+	STA <SPRNOCROP
 	JSR UPDATEPPUMASK	; Disable rendering
 
 	LDA #$3F
@@ -169,26 +172,31 @@ RETMAINMENU:
 	LDA <JOY1IN
 	BNE .DOWN
 	JMP .DONE		; Skip loop if player 1 is not pressing buttons
+
 .DOWN:
 	LDA <JOY1IN
 	AND #BUTTON_DOWN	; Check if player 1 is pressing down
 	BEQ .UP
 	LDA SPR1Y
 	CMP #$90		; Check if the cursor is in the top position
-	BNE .UP
+	BNE .MENUDOUT
 	LDA #$A0
 	STA SPR1Y		; Move cursor down
+.MENUDOUT:
 	JMP .DONE
+
 .UP:
 	LDA <JOY1IN
 	AND #BUTTON_UP		; Check if player 1 is pressing up
 	BEQ .STNEW
 	LDA SPR1Y
 	CMP #$A0		; Check if the cursor is in the bottom position
-	BNE .STNEW
+	BNE .MENUUOUT
 	LDA #$90
 	STA SPR1Y		; Move cursor up
+.MENUUOUT:
 	JMP .DONE
+
 .STNEW:
 	LDA <JOY1IN
 	AND #BUTTON_START	; Check if player 1 is pressing start
@@ -204,6 +212,7 @@ RETMAINMENU:
 	BNE .DONE
 	JSR CLEARSPR		; Clear sprites
 	JMP OPTIONS		; Go to game options menu
+
 .DONE:
 	JSR VBWAIT		; Wait for next vblank
 	JMP .MENULOOP
@@ -293,7 +302,7 @@ OPTIONS:
 	LDA #SPR_PALETTE0
 	STA SPR1ATTR		; Draw the options cursor
 
-	LDA MUSICEN
+	LDA MUSICEN		; Check if music is disabled
 	BEQ .MUSICOFF
 
 	LDA #LOW(MUSICATTRON)
@@ -335,33 +344,33 @@ OPTIONS:
 	BEQ .UP
 	LDA SPR1Y
 	CMP #$58		; Check if the cursor is in the top position
-	BNE .UP
-	LDA #$20
-	STA SPR1X
+	BNE .OPTIONSDOUT
 	LDA #$A0
 	STA SPR1Y		; Move cursor down
+.OPTIONSDOUT:
 	JMP .DONE
+
 .UP:
 	LDA <JOY1IN
 	AND #BUTTON_UP		; Check if player 1 is pressing up
 	BEQ .LMUSIC
 	LDA SPR1Y
 	CMP #$A0		; Check if the cursor is in the bottom position
-	BNE .LMUSIC
-	LDA #$20
-	STA SPR1X
+	BNE .OPTIONSUOUT
 	LDA #$58
 	STA SPR1Y		; Move cursor up
+.OPTIONSUOUT:
 	JMP .DONE
+
 .LMUSIC:
 	LDA <JOY1IN
 	AND #BUTTON_LEFT	; Check if player 1 is pressing left
 	BEQ .RMUSIC
 	LDA SPR1Y
 	CMP #$58		; Check if the cursor is in the top position
-	BNE .RMUSIC
+	BNE .OPTIONSLOUT
 	LDA MUSICEN		; Check if music is disabled
-	BNE .RMUSIC
+	BNE .OPTIONSLOUT
 	LDA #1			; Turn music toggle on
 	STA MUSICEN
 	;; TODO - Enable music
@@ -379,17 +388,18 @@ OPTIONS:
 	LDA #HIGH(MUSICATTRON)
 	STA <PPUCINPUT+1
 	JSR PPUCOPY		; Change attributes of music toggle
-
+.OPTIONSLOUT:
 	JMP .DONE
+
 .RMUSIC:
 	LDA <JOY1IN
 	AND #BUTTON_RIGHT	; Check if player 1 is pressing right
 	BEQ .STRETURN
 	LDA SPR1Y
 	CMP #$58		; Check if the cursor is in the top position
-	BNE .STRETURN
+	BNE .OPTIONSROUT
 	LDA MUSICEN		; Check if music is enabled
-	BEQ .STRETURN
+	BEQ .OPTIONSROUT
 	LDA #0
 	STA MUSICEN		; Turn music toggle off
 	;; TODO - Disable music
@@ -407,7 +417,7 @@ OPTIONS:
 	LDA #HIGH(MUSICATTROFF)
 	STA <PPUCINPUT+1
 	JSR PPUCOPY		; Change attributes of music toggle
-
+.OPTIONSROUT:
 	JMP .DONE
 
 .STRETURN:
@@ -435,6 +445,7 @@ OPTIONS:
 
 	JSR CLEARSPR
 	JMP RETMAINMENU
+
 .DONE:
 	JSR VBWAIT		; Wait for next vblank
 	JMP .OPTIONSLOOP
