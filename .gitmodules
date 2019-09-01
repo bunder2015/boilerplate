@@ -1,0 +1,3 @@
+[submodule "include/ggsound"]
+	path = include/ggsound
+	url = https://github.com/gradualgames/ggsound
