@@ -26,11 +26,15 @@ DEBUG				; Comment this line to disable debugging
 	; NES CPU register constants
 	.include "./include/registers.asm"
 	.include "./include/mmc1-registers.asm"
+	.include "./include/ggsound/ggsound_nesasm/ggsound.inc"
 
 ;;;;;;;;;;
 
 	; Zero-page memory $0000-00FF
 	.zp
+
+	; for use with ggsound
+	.include "./include/ggsound/ggsound_nesasm/ggsound_zp.inc"
 
 BGEN:
 	.ds 1			; BG render enable
@@ -126,11 +130,15 @@ PRINTB:
 	; Work memory $0200-07FF
 	.bss
 
-	; Reserve first 256b chunk of WRAM for PPU OAM
-	.include "./include/bss-ppu-oam.asm"
+	; for use with ggsound
+	.include "./include/ggsound/ggsound_nesasm/ggsound_ram.inc"
 
 MUSICEN:
 	.ds 1			; Music toggle
+
+	.org $0700
+	; Reserve last 256b chunk of WRAM for PPU OAM
+	.include "./include/bss-ppu-oam.asm"
 
 ;;;;;;;;;;
 

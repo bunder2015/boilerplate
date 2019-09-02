@@ -452,6 +452,16 @@ DBGTEXT6:
 
 	.endif
 
+	; for use with ggsound
+	.include "./include/ggsound/ggsound_nesasm/ggsound.asm"
+	.include "./include/song.asm"
+	.include "./include/song_dpcm.asm"
+	;.include "./include/Battle2.asm"
+
+	.ifdef DEBUG
+	BRK			; Catch runaway execution
+	.endif
+
 STARTNEWGAME:
 	LDA #MMC1_PRG_BANK1
 	STA <MMCPRG
@@ -544,7 +554,7 @@ CLEARSPR:
 	LDA #$FF		; FF moves the sprites off the screen
 	LDX #$00
 .L1:
-	STA $0200, X		; Remove all sprites from screen
+	STA $0700, X		; Remove all sprites from screen
 	INX
 	BNE .L1
 
@@ -1111,7 +1121,7 @@ NMI:
 
 	LDA #$00
 	STA OAMADDR
-	LDA #$02
+	LDA #$07
 	STA OAMDMA		; DMA transfer $0200-$02FF to PPU OAM
 
 	LDA #SPR_REND_EN
@@ -1122,6 +1132,7 @@ NMI:
 
 	JSR READJOYS		; Read controllers
 	;; TODO - play sound
+	soundengine_update
 
 	DEC <NMIREADY		; Reset waiting status
 	LDA <WAITFRAMES
@@ -1159,15 +1170,15 @@ RESET:
 	BPL .VB1		; Wait for first vblank
 
 .MEMCLR:
-	LDA #$FF
-	STA $0200, X		; Initialize WRAM copy of PPU OAM
 	LDA #$00
 	STA $0000, X
 	STA $0100, X
+	STA $0200, X		; Initialize WRAM copy of PPU OAM
 	STA $0300, X
 	STA $0400, X
 	STA $0500, X
 	STA $0600, X
+	LDA #$FF
 	STA $0700, X		; Initialize WRAM
 	INX
 	BNE .MEMCLR
