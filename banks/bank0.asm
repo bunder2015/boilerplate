@@ -141,7 +141,6 @@ RETMAINMENU:
 .SRAMTESTPASS:
 	LDA SRAMMUSIC
 	STA MUSICEN		; Load music toggle from PRG RAM and store to WRAM
-	BEQ .SRAMTESTDONE
 
 .SRAMTESTDONE:
 	LDA #MMC1_PRGRAM_DIS
@@ -150,39 +149,42 @@ RETMAINMENU:
 
 	JSR HIDESAVEICON	; Hide the save icon
 
-	;; TODO - start music
-	;LDA #SOUND_REGION_NTSC
-	;STA <sound_param_byte_0
+	LDA #1
+	STA <SKIPSRAMTEST	; Mark tests as done so we can skip them if we run the main menu again
+	STA <SOUNDREADY
 
-	;LDA #LOW(song_list)
-	;STA <sound_param_word_0
-	;LDA #HIGH(song_list)
-	;STA <sound_param_word_0+1
+	LDA #SOUND_REGION_NTSC
+	STA <sound_param_byte_0
+
+	LDA #LOW(song_list)
+	STA <sound_param_word_0
+	LDA #HIGH(song_list)
+	STA <sound_param_word_0+1
 
 	;LDA #LOW(sfx_list)
 	;STA <sound_param_word_1
 	;LDA #HIGH(sfx_list)
 	;STA <sound_param_word_1+1
 
-	;LDA #LOW(instrument_list)
-	;STA <sound_param_word_2
-	;LDA #HIGH(instrument_list)
-	;STA <sound_param_word_2+1
+	LDA #LOW(instrument_list)
+	STA <sound_param_word_2
+	LDA #HIGH(instrument_list)
+	STA <sound_param_word_2+1
 
 	;LDA #LOW(dpcm_list)
 	;STA <sound_param_word_3
 	;LDA #HIGH(dpcm_list)
 	;STA <sound_param_word_3+1
 
-	;JSR sound_initialize
+	JSR sound_initialize	; Initialize the sound hardware
 
-	;LDA #song_index_New20song
-	;STA <sound_param_byte_0
-	;JSR play_song
+	LDA #song_index_New20song
+	STA <sound_param_byte_0
 
-	LDA #1
-	STA <SKIPSRAMTEST	; Mark tests as done so we can skip them if we run the main menu again
-	STA <SOUNDREADY
+	LDA MUSICEN
+	BEQ .SKIPSRAMTEST	; Check if music is enabled
+
+	JSR play_song		; Start music
 
 .SKIPSRAMTEST:
 	LDA #$58
@@ -403,7 +405,6 @@ OPTIONS:
 	BNE .OPTIONSLOUT
 	LDA #1			; Turn music toggle on
 	STA MUSICEN
-	;; TODO - Enable music
 
 	LDA #REND_DIS
 	STA <SPREN
@@ -424,6 +425,10 @@ OPTIONS:
 	LDA #HIGH(MUSICATTRON)
 	STA <PPUCINPUT+1
 	JSR PPUCOPY		; Change attributes of music toggle
+
+	LDA #song_index_New20song
+	STA <sound_param_byte_0
+	JSR play_song		; Start music
 .OPTIONSLOUT:
 	JMP .DONE
 
@@ -438,7 +443,8 @@ OPTIONS:
 	BEQ .OPTIONSROUT
 	LDA #0
 	STA MUSICEN		; Turn music toggle off
-	;; TODO - Disable music
+
+	JSR sound_stop		; Stop sound
 
 	LDA #REND_DIS
 	STA <SPREN

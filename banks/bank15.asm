@@ -25,7 +25,10 @@ BREAK:
 	DEC <DBGPC+1
 	DEC <DBGPC+1		; Return program counter to address that caused the BRK
 
-	;; TODO - stop sound
+	LDA #0
+	STA MUSICEN
+	JSR sound_stop		; Stop sound
+
 	LDA #REND_DIS
 	STA <SPREN
 	STA <BGEN
@@ -453,8 +456,8 @@ DBGTEXT6:
 	.endif
 
 	; for use with ggsound
-	;.include "./include/ggsound/ggsound_nesasm/ggsound.asm"
-	;.include "./include/test.asm"
+	.include "./include/ggsound/ggsound_nesasm/ggsound.asm"
+	.include "./include/test.asm"
 
 	.ifdef DEBUG
 	BRK			; Catch runaway execution
@@ -1129,10 +1132,10 @@ NMI:
 	JSR UPDATEPPUMASK	; Enable rendering
 
 	JSR READJOYS		; Read controllers
-	;; TODO - play sound
+
 	LDA <SOUNDREADY
 	BEQ .SOUNDNOTINIT
-	;soundengine_update
+	soundengine_update	; Play sound
 
 .SOUNDNOTINIT:
 	DEC <NMIREADY		; Reset waiting status

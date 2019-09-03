@@ -26,7 +26,7 @@ DEBUG				; Comment this line to disable debugging
 	; NES CPU register constants
 	.include "./include/registers.asm"
 	.include "./include/mmc1-registers.asm"
-	;.include "./include/ggsound/ggsound_nesasm/ggsound.inc"
+	.include "./include/ggsound/ggsound_nesasm/ggsound.inc"
 
 ;;;;;;;;;;
 
@@ -125,7 +125,7 @@ PRINTB:
 	.endif
 
 	; for use with ggsound
-	;.include "./include/ggsound/ggsound_nesasm/ggsound_zp.inc"
+	.include "./include/ggsound/ggsound_nesasm/ggsound_zp.inc"
 
 ;;;;;;;;;;
 
@@ -136,7 +136,7 @@ PRINTB:
 	.include "./include/bss-ppu-oam.asm"
 
 	; for use with ggsound
-	;.include "./include/ggsound/ggsound_nesasm/ggsound_ram.inc"
+	.include "./include/ggsound/ggsound_nesasm/ggsound_ram.inc"
 
 MUSICEN:
 	.ds 1			; Music toggle
