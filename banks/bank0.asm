@@ -151,38 +151,38 @@ RETMAINMENU:
 	JSR HIDESAVEICON	; Hide the save icon
 
 	;; TODO - start music
-	LDA #SOUND_REGION_NTSC
-	STA <sound_param_byte_0
+	;LDA #SOUND_REGION_NTSC
+	;STA <sound_param_byte_0
 
-	LDA #LOW(song_list)
-	STA <sound_param_word_0
-	LDA #HIGH(song_list)
-	STA <sound_param_word_0+1
+	;LDA #LOW(song_list)
+	;STA <sound_param_word_0
+	;LDA #HIGH(song_list)
+	;STA <sound_param_word_0+1
 
 	;LDA #LOW(sfx_list)
 	;STA <sound_param_word_1
 	;LDA #HIGH(sfx_list)
 	;STA <sound_param_word_1+1
 
-	LDA #LOW(instrument_list)
-	STA <sound_param_word_2
-	LDA #HIGH(instrument_list)
-	STA <sound_param_word_2+1
+	;LDA #LOW(instrument_list)
+	;STA <sound_param_word_2
+	;LDA #HIGH(instrument_list)
+	;STA <sound_param_word_2+1
 
-	LDA #LOW(dpcm_list)
-	STA <sound_param_word_3
-	LDA #HIGH(dpcm_list)
-	STA <sound_param_word_3+1
+	;LDA #LOW(dpcm_list)
+	;STA <sound_param_word_3
+	;LDA #HIGH(dpcm_list)
+	;STA <sound_param_word_3+1
 
-	JSR sound_initialize
+	;JSR sound_initialize
 
 	;LDA #song_index_New20song
-	LDA #song_index_Main20Menu
-	STA <sound_param_byte_0
-	JSR play_song
+	;STA <sound_param_byte_0
+	;JSR play_song
 
 	LDA #1
 	STA <SKIPSRAMTEST	; Mark tests as done so we can skip them if we run the main menu again
+	STA <SOUNDREADY
 
 .SKIPSRAMTEST:
 	LDA #$58
@@ -405,6 +405,12 @@ OPTIONS:
 	STA MUSICEN
 	;; TODO - Enable music
 
+	LDA #REND_DIS
+	STA <SPREN
+	STA <BGEN
+	JSR UPDATEPPUMASK	; Disable rendering
+	JSR VBWAIT
+
 	LDA #$27
 	STA <PPUCADDR
 	LDA #$D4
@@ -433,6 +439,12 @@ OPTIONS:
 	LDA #0
 	STA MUSICEN		; Turn music toggle off
 	;; TODO - Disable music
+
+	LDA #REND_DIS
+	STA <SPREN
+	STA <BGEN
+	JSR UPDATEPPUMASK	; Disable rendering
+	JSR VBWAIT
 
 	LDA #$27
 	STA <PPUCADDR
