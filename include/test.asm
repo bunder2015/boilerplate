@@ -19,15 +19,15 @@ _New_instrument_0:
   .db ENV_STOP
 
 _square1_1:
-  .db 5,14,16,18,ARP_TYPE_ABSOLUTE
-  .db 11,9,8,7,6,3,2,0,ENV_STOP
+  .db 5,18,20,22,ARP_TYPE_ABSOLUTE
+  .db 11,9,8,7,7,7,7,7,6,3,2,0,ENV_STOP
   .db 0,ENV_STOP
   .db 0,DUTY_ENV_STOP
   .db ENV_STOP
 
 _square2_2:
-  .db 5,7,9,11,ARP_TYPE_ABSOLUTE
-  .db 11,ENV_STOP
+  .db 5,18,20,22,ARP_TYPE_ABSOLUTE
+  .db 11,9,8,7,7,7,7,7,6,3,2,0,ENV_STOP
   .db 0,ENV_STOP
   .db 0,DUTY_ENV_STOP
   .db ENV_STOP
@@ -41,7 +41,7 @@ _triangle_3:
 
 _noise_4:
   .db 5,7,9,11,ARP_TYPE_ABSOLUTE
-  .db 9,ENV_STOP
+  .db 10,ENV_STOP
   .db 0,ENV_STOP
   .db 0,DUTY_ENV_STOP
   .db ENV_STOP

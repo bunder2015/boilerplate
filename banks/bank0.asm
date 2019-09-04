@@ -236,6 +236,7 @@ RETMAINMENU:
 	LDA SPR1Y
 	CMP #$90		; Check if the cursor is in the top position
 	BNE .STOPTS
+	JSR pause_song		; Stop music
 	JSR CLEARSCREEN		; Clear screen
 	JMP STARTNEWGAME	; Go to new game
 .STOPTS:
@@ -444,7 +445,7 @@ OPTIONS:
 	LDA #0
 	STA MUSICEN		; Turn music toggle off
 
-	JSR sound_stop		; Stop sound
+	JSR pause_song		; Stop music
 
 	LDA #REND_DIS
 	STA <SPREN
