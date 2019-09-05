@@ -63,9 +63,11 @@ BREAK:
 	LDA #HIGH(DBGTEXT1)
 	STA <PPUCINPUT+1
 	JSR PPUCOPY		; Load debug text 1 into PPU
-	LDA #1
-	STA <PRINTB
-	JSR PRINTBYTE
+	LDA <DBGPC
+	STA <PBINPUT
+	LDA <DBGPC+1
+	STA <PBINPUT+1
+	JSR PRINT2BYTES
 
 	LDA #$20
 	STA <PPUCADDR
@@ -80,9 +82,11 @@ BREAK:
 	LDA #HIGH(DBGTEXT2)
 	STA <PPUCINPUT+1
 	JSR PPUCOPY		; Load debug text 2 into PPU
-	LDA #2
-	STA <PRINTB
-	JSR PRINTBYTE
+	LDA #0
+	STA <PBINPUT
+	LDA <DBGA
+	STA <PBINPUT+1
+	JSR PRINT1BYTE
 
 	LDA #$20
 	STA <PPUCADDR
@@ -97,9 +101,11 @@ BREAK:
 	LDA #HIGH(DBGTEXT3)
 	STA <PPUCINPUT+1
 	JSR PPUCOPY		; Load debug text 3 into PPU
-	LDA #3
-	STA <PRINTB
-	JSR PRINTBYTE
+	LDA #0
+	STA <PBINPUT
+	LDA <DBGX
+	STA <PBINPUT+1
+	JSR PRINT1BYTE
 
 	LDA #$20
 	STA <PPUCADDR
@@ -114,9 +120,11 @@ BREAK:
 	LDA #HIGH(DBGTEXT4)
 	STA <PPUCINPUT+1
 	JSR PPUCOPY		; Load debug text 4 into PPU
-	LDA #4
-	STA <PRINTB
-	JSR PRINTBYTE
+	LDA #0
+	STA <PBINPUT
+	LDA <DBGY
+	STA <PBINPUT+1
+	JSR PRINT1BYTE
 
 	LDA #$20
 	STA <PPUCADDR
@@ -131,9 +139,11 @@ BREAK:
 	LDA #HIGH(DBGTEXT5)
 	STA <PPUCINPUT+1
 	JSR PPUCOPY		; Load debug text 5 into PPU
-	LDA #5
-	STA <PRINTB
-	JSR PRINTBYTE
+	LDA #0
+	STA <PBINPUT
+	LDA <DBGSP
+	STA <PBINPUT+1
+	JSR PRINT1BYTE
 
 	LDA #$20
 	STA <PPUCADDR
@@ -148,9 +158,11 @@ BREAK:
 	LDA #HIGH(DBGTEXT6)
 	STA <PPUCINPUT+1
 	JSR PPUCOPY		; Load debug text 6 into PPU
-	LDA #6
-	STA <PRINTB
-	JSR PRINTBYTE
+	LDA #0
+	STA <PBINPUT
+	LDA <DBGPS
+	STA <PBINPUT+1
+	JSR PRINT1BYTE
 
 	LDA #NT_SEL0
 	STA <NT			; Select nametable 0
@@ -160,270 +172,113 @@ BREAK:
 .LOOP:
 	JMP .LOOP		; Infinite loop
 
-PRINTBYTE:
-	;; Prints debug registers from memory to screen (1-2 byte hex to ASCII)
-	;; Input: <PRINTB <DBGPC <DBGA <DBGX <DBGY <DBGSP <DBGPS
-	;; Clobbers: A
-	;; TODO - Optimize this subroutine for size
-	LDA <PRINTB		; Byte to print
-	CMP #1			; Program Counter
-	BNE .P2
+PRINT1BYTE:
+	; Prints one hex byte to the screen, assumes PPUADDR has already been set
+	; Input: <PBINPUT
+	; Clobbers: A
+	LDA <PBINPUT+1			; Right side byte
+	AND %11110000			; Left side bits
+	STA <PBTEMP
+	LSR <PBTEMP
+	LSR <PBTEMP
+	LSR <PBTEMP
+	LSR <PBTEMP			; Shift left side bits into right side bits
+	CMP #10				; If the nibble is higher than 9 it is a hex letter
+	BCS .ALPHALEFT1
+	CLC
+	ADC #$30			; Shift nibble into ASCII table range for 0-9
+	JMP .PRINTLEFT1
+.ALPHALEFT1:
+	CLC
+	ADC #$37			; Shift nibble into ASCII table range for A-F
+.PRINTLEFT1:
+	STA PPUDATA			; Write to PPU
 
-	LDA <DBGPC
-	AND #%11110000
-	STA <PBTEMP1
-	LSR <PBTEMP1
-	LSR <PBTEMP1
-	LSR <PBTEMP1
-	LSR <PBTEMP1
-	LDA <PBTEMP1
-	CMP #10
-	BCS .A1
+	LDA <PBINPUT+1			; Right side byte
+	AND %00001111			; Right side bits
+	STA <PBTEMP
+	CMP #10				; If the nibble is higher than 9 it is a hex letter
+	BCS .ALPHARIGHT1
 	CLC
-	ADC #$30
-	JMP .N1
-.A1:
+	ADC #$30			; Shift nibble into ASCII table range for 0-9
+	JMP .PRINTRIGHT1
+.ALPHARIGHT1:
 	CLC
-	ADC #$37
-.N1:
-	STA PPUDATA
+	ADC #$37			; Shift nibble into ASCII table range for A-F
+.PRINTRIGHT1:
+	STA PPUDATA			; Write to PPU
 
-	LDA <DBGPC
-	AND #%00001111
-	CMP #10
-	BCS .A2
-	CLC
-	ADC #$30
-	JMP .N2
-.A2:
-	CLC
-	ADC #$37
-.N2:
-	STA PPUDATA
+	JSR VBWAIT
+	RTS
 
-	LDA <DBGPC+1
-	AND #%11110000
-	STA <PBTEMP1
-	LSR <PBTEMP1
-	LSR <PBTEMP1
-	LSR <PBTEMP1
-	LSR <PBTEMP1
-	LDA <PBTEMP1
-	CMP #10
-	BCS .A3
+PRINT2BYTES:
+	; Prints two hex bytes to the screen, assumes PPUADDR has already been set
+	; Input: <PBINPUT
+	; Clobbers: A
+	LDA <PBINPUT			; Left side byte
+	AND %11110000			; Left side bits
+	STA <PBTEMP
+	LSR <PBTEMP
+	LSR <PBTEMP
+	LSR <PBTEMP
+	LSR <PBTEMP			; Shift left side bits into right side bits
+	CMP #10				; If the nibble is higher than 9 it is a hex letter
+	BCS .ALPHALEFT2A
 	CLC
-	ADC #$30
-	JMP .N3
-.A3:
+	ADC #$30			; Shift nibble into ASCII table range for 0-9
+	JMP .PRINTLEFT2A
+.ALPHALEFT2A:
 	CLC
-	ADC #$37
-.N3:
-	STA PPUDATA
+	ADC #$37			; Shift nibble into ASCII table range for A-F
+.PRINTLEFT2A:
+	STA PPUDATA			; Write to PPU
 
-	LDA <DBGPC+1
-	AND #%00001111
-	CMP #10
-	BCS .A4
+	LDA <PBINPUT			; Left side byte
+	AND %00001111			; Right side bits
+	STA <PBTEMP
+	CMP #10				; If the nibble is higher than 9 it is a hex letter
+	BCS .ALPHARIGHT2A
 	CLC
-	ADC #$30
-	JMP .N4
-.A4:
+	ADC #$30			; Shift nibble into ASCII table range for 0-9
+	JMP .PRINTRIGHT2A
+.ALPHARIGHT2A:
 	CLC
-	ADC #$37
-.N4:
-	STA PPUDATA
+	ADC #$37			; Shift nibble into ASCII table range for A-F
+.PRINTRIGHT2A:
+	STA PPUDATA			; Write to PPU
 
-	JMP .OUT
-.P2:
-	LDA <PRINTB		; Byte to print
-	CMP #2			; A register
-	BNE .P3
+	LDA <PBINPUT+1			; Right side byte
+	AND %11110000			; Left side bits
+	STA <PBTEMP
+	LSR <PBTEMP
+	LSR <PBTEMP
+	LSR <PBTEMP
+	LSR <PBTEMP			; Shift left side bits into right side bits
+	CMP #10				; If the nibble is higher than 9 it is a hex letter
+	BCS .ALPHALEFT2B
+	CLC
+	ADC #$30			; Shift nibble into ASCII table range for 0-9
+	JMP .PRINTLEFT2B
+.ALPHALEFT2B:
+	CLC
+	ADC #$37			; Shift nibble into ASCII table range for A-F
+.PRINTLEFT2B:
+	STA PPUDATA			; Write to PPU
 
-	LDA <DBGA
-	AND #%11110000
-	STA <PBTEMP1
-	LSR <PBTEMP1
-	LSR <PBTEMP1
-	LSR <PBTEMP1
-	LSR <PBTEMP1
-	LDA <PBTEMP1
-	CMP #10
-	BCS .A5
+	LDA <PBINPUT+1			; Right side byte
+	AND %00001111			; Right side bits
+	STA <PBTEMP
+	CMP #10				; If the nibble is higher than 9 it is a hex letter
+	BCS .ALPHARIGHT2B
 	CLC
-	ADC #$30
-	JMP .N5
-.A5:
+	ADC #$30			; Shift nibble into ASCII table range for 0-9
+	JMP .PRINTRIGHT2B
+.ALPHARIGHT2B:
 	CLC
-	ADC #$37
-.N5:
-	STA PPUDATA
+	ADC #$37			; Shift nibble into ASCII table range for A-F
+.PRINTRIGHT2B:
+	STA PPUDATA			; Write to PPU
 
-	LDA <DBGA
-	AND #%00001111
-	CMP #10
-	BCS .A6
-	CLC
-	ADC #$30
-	JMP .N6
-.A6:
-	CLC
-	ADC #$37
-.N6:
-	STA PPUDATA
-
-	JMP .OUT
-.P3:
-	LDA <PRINTB		; Byte to print
-	CMP #3			; X register
-	BNE .P4
-
-	LDA <DBGX
-	AND #%11110000
-	STA <PBTEMP1
-	LSR <PBTEMP1
-	LSR <PBTEMP1
-	LSR <PBTEMP1
-	LSR <PBTEMP1
-	LDA <PBTEMP1
-	CMP #10
-	BCS .A7
-	CLC
-	ADC #$30
-	JMP .N7
-.A7:
-	CLC
-	ADC #$37
-.N7:
-	STA PPUDATA
-
-	LDA <DBGX
-	AND #%00001111
-	CMP #10
-	BCS .A8
-	CLC
-	ADC #$30
-	JMP .N8
-.A8:
-	CLC
-	ADC #$37
-.N8:
-	STA PPUDATA
-
-	JMP .OUT
-.P4:
-	LDA <PRINTB		; Byte to print
-	CMP #4			; Y register
-	BNE .P5
-
-	LDA <DBGY
-	AND #%11110000
-	STA <PBTEMP1
-	LSR <PBTEMP1
-	LSR <PBTEMP1
-	LSR <PBTEMP1
-	LSR <PBTEMP1
-	LDA <PBTEMP1
-	CMP #10
-	BCS .A9
-	CLC
-	ADC #$30
-	JMP .N9
-.A9:
-	CLC
-	ADC #$37
-.N9:
-	STA PPUDATA
-
-	LDA <DBGY
-	AND #%00001111
-	CMP #10
-	BCS .A10
-	CLC
-	ADC #$30
-	JMP .N10
-.A10:
-	CLC
-	ADC #$37
-.N10:
-	STA PPUDATA
-
-	JMP .OUT
-.P5:
-	LDA <PRINTB		; Byte to print
-	CMP #5			; Stack Pointer
-	BNE .P6
-
-	LDA <DBGSP
-	AND #%11110000
-	STA <PBTEMP1
-	LSR <PBTEMP1
-	LSR <PBTEMP1
-	LSR <PBTEMP1
-	LSR <PBTEMP1
-	LDA <PBTEMP1
-	CMP #10
-	BCS .A11
-	CLC
-	ADC #$30
-	JMP .N11
-.A11:
-	CLC
-	ADC #$37
-.N11:
-	STA PPUDATA
-
-	LDA <DBGSP
-	AND #%00001111
-	CMP #10
-	BCS .A12
-	CLC
-	ADC #$30
-	JMP .N12
-.A12:
-	CLC
-	ADC #$37
-.N12:
-	STA PPUDATA
-
-	JMP .OUT
-.P6:
-	LDA <PRINTB		; Byte to print
-	CMP #6			; CPU status flags
-	BNE .OUT		; This should never happen
-
-	LDA <DBGPS
-	AND #%11110000
-	STA <PBTEMP1
-	LSR <PBTEMP1
-	LSR <PBTEMP1
-	LSR <PBTEMP1
-	LSR <PBTEMP1
-	LDA <PBTEMP1
-	CMP #10
-	BCS .A13
-	CLC
-	ADC #$30
-	JMP .N13
-.A13:
-	CLC
-	ADC #$37
-.N13:
-	STA PPUDATA
-
-	LDA <DBGPS
-	AND #%00001111
-	CMP #10
-	BCS .A14
-	CLC
-	ADC #$30
-	JMP .N14
-.A14:
-	CLC
-	ADC #$37
-.N14:
-	STA PPUDATA
-
-.OUT:
 	JSR VBWAIT
 	RTS
 
@@ -455,7 +310,7 @@ DBGTEXT6:
 
 	.endif
 
-	; for use with ggsound
+	; For use with ggsound - main ggsound code and game soundtrack
 	.include "./include/ggsound/ggsound_nesasm/ggsound.asm"
 	.include "./include/test.asm"
 

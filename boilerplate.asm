@@ -26,6 +26,8 @@ DEBUG				; Comment this line to disable debugging
 	; NES CPU register constants
 	.include "./include/registers.asm"
 	.include "./include/mmc1-registers.asm"
+
+	; For use with ggsound - constants
 	.include "./include/ggsound/ggsound_nesasm/ggsound.inc"
 
 ;;;;;;;;;;
@@ -90,7 +92,7 @@ SCROLLY:
 SKIPSRAMTEST:
 	.ds 1			; Skip PRG RAM test
 SOUNDREADY:
-	.ds 1
+	.ds 1			; Status of ggsound initialization
 SPREN:
 	.ds 1			; SPR render enable
 SPRNOCROP:
@@ -118,13 +120,13 @@ DBGX:
 	.ds 1			; X register
 DBGY:
 	.ds 1			; Y register
-PBTEMP1:
-	.ds 1
-PRINTB:
-	.ds 1
+PBINPUT:
+	.ds 2			; Input to PRINT1BYTE/PRINT2BYTES
+PBTEMP:
+	.ds 1			; Temporary variable for PRINT1BYTE/PRINT2BYTES
 	.endif
 
-	; for use with ggsound
+	; For use with ggsound - zero page variables
 	.include "./include/ggsound/ggsound_nesasm/ggsound_zp.inc"
 
 ;;;;;;;;;;
@@ -135,7 +137,7 @@ PRINTB:
 	; Reserve first 256b chunk of WRAM for PPU OAM
 	.include "./include/bss-ppu-oam.asm"
 
-	; for use with ggsound
+	; For use with ggsound - WRAM variables
 	.include "./include/ggsound/ggsound_nesasm/ggsound_ram.inc"
 
 MUSICEN:
