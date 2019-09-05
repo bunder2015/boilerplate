@@ -177,12 +177,13 @@ PRINT1BYTE:
 	; Input: <PBINPUT
 	; Clobbers: A
 	LDA <PBINPUT+1			; Right side byte
-	AND %11110000			; Left side bits
+	AND #%11110000			; Left side bits
 	STA <PBTEMP
 	LSR <PBTEMP
 	LSR <PBTEMP
 	LSR <PBTEMP
 	LSR <PBTEMP			; Shift left side bits into right side bits
+	LDA <PBTEMP
 	CMP #10				; If the nibble is higher than 9 it is a hex letter
 	BCS .ALPHALEFT1
 	CLC
@@ -195,7 +196,7 @@ PRINT1BYTE:
 	STA PPUDATA			; Write to PPU
 
 	LDA <PBINPUT+1			; Right side byte
-	AND %00001111			; Right side bits
+	AND #%00001111			; Right side bits
 	STA <PBTEMP
 	CMP #10				; If the nibble is higher than 9 it is a hex letter
 	BCS .ALPHARIGHT1
@@ -216,12 +217,13 @@ PRINT2BYTES:
 	; Input: <PBINPUT
 	; Clobbers: A
 	LDA <PBINPUT			; Left side byte
-	AND %11110000			; Left side bits
+	AND #%11110000			; Left side bits
 	STA <PBTEMP
 	LSR <PBTEMP
 	LSR <PBTEMP
 	LSR <PBTEMP
 	LSR <PBTEMP			; Shift left side bits into right side bits
+	LDA <PBTEMP
 	CMP #10				; If the nibble is higher than 9 it is a hex letter
 	BCS .ALPHALEFT2A
 	CLC
@@ -234,7 +236,7 @@ PRINT2BYTES:
 	STA PPUDATA			; Write to PPU
 
 	LDA <PBINPUT			; Left side byte
-	AND %00001111			; Right side bits
+	AND #%00001111			; Right side bits
 	STA <PBTEMP
 	CMP #10				; If the nibble is higher than 9 it is a hex letter
 	BCS .ALPHARIGHT2A
@@ -248,12 +250,13 @@ PRINT2BYTES:
 	STA PPUDATA			; Write to PPU
 
 	LDA <PBINPUT+1			; Right side byte
-	AND %11110000			; Left side bits
+	AND #%11110000			; Left side bits
 	STA <PBTEMP
 	LSR <PBTEMP
 	LSR <PBTEMP
 	LSR <PBTEMP
 	LSR <PBTEMP			; Shift left side bits into right side bits
+	LDA <PBTEMP
 	CMP #10				; If the nibble is higher than 9 it is a hex letter
 	BCS .ALPHALEFT2B
 	CLC
@@ -266,7 +269,7 @@ PRINT2BYTES:
 	STA PPUDATA			; Write to PPU
 
 	LDA <PBINPUT+1			; Right side byte
-	AND %00001111			; Right side bits
+	AND #%00001111			; Right side bits
 	STA <PBTEMP
 	CMP #10				; If the nibble is higher than 9 it is a hex letter
 	BCS .ALPHARIGHT2B
