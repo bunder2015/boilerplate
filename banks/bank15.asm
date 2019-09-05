@@ -7,6 +7,63 @@
 	.db "15A"
 	.endif
 
+	; For use with ggsound - main ggsound code and game soundtrack
+	.include "./include/ggsound/ggsound_nesasm/ggsound.asm"
+	.include "./include/test.asm"
+
+	.ifdef DEBUG
+	BRK			; Catch runaway execution
+	.endif
+
+STARTNEWGAME:
+	LDA #MMC1_PRG_BANK1
+	STA <MMCPRG
+	JSR UPDATEMMC1PRG
+
+	JMP NEWGAME
+
+	.ifdef DEBUG
+	BRK			; Catch runaway execution
+	.endif
+
+	.ifdef DEBUG
+DBGPALS:
+	.db $01,$20,$10,$00	; BG palette 0
+
+DBGTEXT1:
+	.db "BREAK AT PC: "
+
+DBGTEXT2:
+	.db "A: "
+
+DBGTEXT3:
+	.db "X: "
+
+DBGTEXT4:
+	.db "Y: "
+
+DBGTEXT5:
+	.db "SP: "
+
+DBGTEXT6:
+	.db "PS: "
+	.endif
+
+SRAMFOOTERTEXT:
+	.db "DISCOMBOBULATION"
+
+SRAMHEADERTEXT:
+	.db "THERMOTELEPHONIC"
+
+	.code
+	.bank 31
+	.org $E000
+
+	.ifdef DEBUG
+	BRK			; Catch runaway execution
+	.db "15B"
+	.endif
+
 	.ifdef DEBUG
 BREAK:
 	;; BRK debugger - store debug registers to memory, stop game execution, then display registers
@@ -82,8 +139,6 @@ BREAK:
 	LDA #HIGH(DBGTEXT2)
 	STA <PPUCINPUT+1
 	JSR PPUCOPY		; Load debug text 2 into PPU
-	LDA #0
-	STA <PBINPUT
 	LDA <DBGA
 	STA <PBINPUT+1
 	JSR PRINT1BYTE
@@ -101,8 +156,6 @@ BREAK:
 	LDA #HIGH(DBGTEXT3)
 	STA <PPUCINPUT+1
 	JSR PPUCOPY		; Load debug text 3 into PPU
-	LDA #0
-	STA <PBINPUT
 	LDA <DBGX
 	STA <PBINPUT+1
 	JSR PRINT1BYTE
@@ -120,8 +173,6 @@ BREAK:
 	LDA #HIGH(DBGTEXT4)
 	STA <PPUCINPUT+1
 	JSR PPUCOPY		; Load debug text 4 into PPU
-	LDA #0
-	STA <PBINPUT
 	LDA <DBGY
 	STA <PBINPUT+1
 	JSR PRINT1BYTE
@@ -139,8 +190,6 @@ BREAK:
 	LDA #HIGH(DBGTEXT5)
 	STA <PPUCINPUT+1
 	JSR PPUCOPY		; Load debug text 5 into PPU
-	LDA #0
-	STA <PBINPUT
 	LDA <DBGSP
 	STA <PBINPUT+1
 	JSR PRINT1BYTE
@@ -158,8 +207,6 @@ BREAK:
 	LDA #HIGH(DBGTEXT6)
 	STA <PPUCINPUT+1
 	JSR PPUCOPY		; Load debug text 6 into PPU
-	LDA #0
-	STA <PBINPUT
 	LDA <DBGPS
 	STA <PBINPUT+1
 	JSR PRINT1BYTE
@@ -171,180 +218,6 @@ BREAK:
 	JSR VBWAIT
 .LOOP:
 	JMP .LOOP		; Infinite loop
-
-PRINT1BYTE:
-	; Prints one hex byte to the screen, assumes PPUADDR has already been set
-	; Input: <PBINPUT
-	; Clobbers: A
-	LDA <PBINPUT+1			; Right side byte
-	AND #%11110000			; Left side bits
-	STA <PBTEMP
-	LSR <PBTEMP
-	LSR <PBTEMP
-	LSR <PBTEMP
-	LSR <PBTEMP			; Shift left side bits into right side bits
-	LDA <PBTEMP
-	CMP #10				; If the nibble is higher than 9 it is a hex letter
-	BCS .ALPHALEFT1
-	CLC
-	ADC #$30			; Shift nibble into ASCII table range for 0-9
-	JMP .PRINTLEFT1
-.ALPHALEFT1:
-	CLC
-	ADC #$37			; Shift nibble into ASCII table range for A-F
-.PRINTLEFT1:
-	STA PPUDATA			; Write to PPU
-
-	LDA <PBINPUT+1			; Right side byte
-	AND #%00001111			; Right side bits
-	STA <PBTEMP
-	CMP #10				; If the nibble is higher than 9 it is a hex letter
-	BCS .ALPHARIGHT1
-	CLC
-	ADC #$30			; Shift nibble into ASCII table range for 0-9
-	JMP .PRINTRIGHT1
-.ALPHARIGHT1:
-	CLC
-	ADC #$37			; Shift nibble into ASCII table range for A-F
-.PRINTRIGHT1:
-	STA PPUDATA			; Write to PPU
-
-	JSR VBWAIT
-	RTS
-
-PRINT2BYTES:
-	; Prints two hex bytes to the screen, assumes PPUADDR has already been set
-	; Input: <PBINPUT
-	; Clobbers: A
-	LDA <PBINPUT			; Left side byte
-	AND #%11110000			; Left side bits
-	STA <PBTEMP
-	LSR <PBTEMP
-	LSR <PBTEMP
-	LSR <PBTEMP
-	LSR <PBTEMP			; Shift left side bits into right side bits
-	LDA <PBTEMP
-	CMP #10				; If the nibble is higher than 9 it is a hex letter
-	BCS .ALPHALEFT2A
-	CLC
-	ADC #$30			; Shift nibble into ASCII table range for 0-9
-	JMP .PRINTLEFT2A
-.ALPHALEFT2A:
-	CLC
-	ADC #$37			; Shift nibble into ASCII table range for A-F
-.PRINTLEFT2A:
-	STA PPUDATA			; Write to PPU
-
-	LDA <PBINPUT			; Left side byte
-	AND #%00001111			; Right side bits
-	STA <PBTEMP
-	CMP #10				; If the nibble is higher than 9 it is a hex letter
-	BCS .ALPHARIGHT2A
-	CLC
-	ADC #$30			; Shift nibble into ASCII table range for 0-9
-	JMP .PRINTRIGHT2A
-.ALPHARIGHT2A:
-	CLC
-	ADC #$37			; Shift nibble into ASCII table range for A-F
-.PRINTRIGHT2A:
-	STA PPUDATA			; Write to PPU
-
-	LDA <PBINPUT+1			; Right side byte
-	AND #%11110000			; Left side bits
-	STA <PBTEMP
-	LSR <PBTEMP
-	LSR <PBTEMP
-	LSR <PBTEMP
-	LSR <PBTEMP			; Shift left side bits into right side bits
-	LDA <PBTEMP
-	CMP #10				; If the nibble is higher than 9 it is a hex letter
-	BCS .ALPHALEFT2B
-	CLC
-	ADC #$30			; Shift nibble into ASCII table range for 0-9
-	JMP .PRINTLEFT2B
-.ALPHALEFT2B:
-	CLC
-	ADC #$37			; Shift nibble into ASCII table range for A-F
-.PRINTLEFT2B:
-	STA PPUDATA			; Write to PPU
-
-	LDA <PBINPUT+1			; Right side byte
-	AND #%00001111			; Right side bits
-	STA <PBTEMP
-	CMP #10				; If the nibble is higher than 9 it is a hex letter
-	BCS .ALPHARIGHT2B
-	CLC
-	ADC #$30			; Shift nibble into ASCII table range for 0-9
-	JMP .PRINTRIGHT2B
-.ALPHARIGHT2B:
-	CLC
-	ADC #$37			; Shift nibble into ASCII table range for A-F
-.PRINTRIGHT2B:
-	STA PPUDATA			; Write to PPU
-
-	JSR VBWAIT
-	RTS
-
-DBGATTR:
-	.db $55,$55,$55,$55,$55,$55,$55,$55	; Top 2 rows of screen
-	.db $55,$55,$55,$55,$55,$55,$55,$55	; Second 2 rows of screen
-	.db $55,$55,$55,$55,$55,$55,$55,$55	; Third 2 rows of screen
-	.db $55,$55,$55,$55,$55,$55,$55,$55	; Fourth 2 rows of screen
-	.db $55,$55,$55,$55,$55,$55,$55,$55	; Fifth 2 rows of screen
-	.db $55,$55,$55,$55,$55,$55,$55,$55	; Sixth 2 rows of screen
-	.db $55,$55,$55,$55,$55,$55,$55,$55	; Seventh 2 rows of screen
-	.db $05,$05,$05,$05,$05,$05,$05,$05	; Last row of screen (lower nibbles)
-
-DBGPALS:
-	.db $01,$20,$10,$00	; BG palette 0
-
-DBGTEXT1:
-	.db "BREAK AT PC: "
-DBGTEXT2:
-	.db "A: "
-DBGTEXT3:
-	.db "X: "
-DBGTEXT4:
-	.db "Y: "
-DBGTEXT5:
-	.db "SP: "
-DBGTEXT6:
-	.db "PS: "
-
-	.endif
-
-	; For use with ggsound - main ggsound code and game soundtrack
-	.include "./include/ggsound/ggsound_nesasm/ggsound.asm"
-	.include "./include/test.asm"
-
-	.ifdef DEBUG
-	BRK			; Catch runaway execution
-	.endif
-
-STARTNEWGAME:
-	LDA #MMC1_PRG_BANK1
-	STA <MMCPRG
-	JSR UPDATEMMC1PRG
-
-	JMP NEWGAME
-
-	.ifdef DEBUG
-	BRK			; Catch runaway execution
-	.endif
-
-SRAMFOOTERTEXT:
-	.db "DISCOMBOBULATION"
-
-SRAMHEADERTEXT:
-	.db "THERMOTELEPHONIC"
-
-	.code
-	.bank 31
-	.org $E000
-
-	.ifdef DEBUG
-	BRK			; Catch runaway execution
-	.db "15B"
 	.endif
 
 CLEARSCREEN:
@@ -494,6 +367,90 @@ PPUCOPY:
 
 	JSR RESETSCR		; Reset PPU scrolling
 
+	RTS
+
+	.ifdef DEBUG
+	BRK			; Catch runaway execution
+	.endif
+
+PRINT2BYTES:
+	; Prints two hex bytes to the screen, assumes PPUADDR has already been set
+	; This must be placed before PRINT1BYTE as we fall through to print the other byte
+	; Input: <PBINPUT
+	; Clobbers: A
+	LDA <PBINPUT			; Left side byte
+	AND #%11110000			; Left side bits
+	STA <PBTEMP
+	LSR <PBTEMP
+	LSR <PBTEMP
+	LSR <PBTEMP
+	LSR <PBTEMP			; Shift left side bits into right side bits
+	LDA <PBTEMP
+	CMP #10				; If the nibble is higher than 9 it is a hex letter
+	BCS .ALPHALEFT
+	CLC
+	ADC #$30			; Shift nibble into ASCII table range for 0-9
+	JMP .PRINTLEFT
+.ALPHALEFT:
+	CLC
+	ADC #$37			; Shift nibble into ASCII table range for A-F
+.PRINTLEFT:
+	STA PPUDATA			; Write to PPU
+
+	LDA <PBINPUT			; Left side byte
+	AND #%00001111			; Right side bits
+	STA <PBTEMP
+	CMP #10				; If the nibble is higher than 9 it is a hex letter
+	BCS .ALPHARIGHT
+	CLC
+	ADC #$30			; Shift nibble into ASCII table range for 0-9
+	JMP .PRINTRIGHT
+.ALPHARIGHT:
+	CLC
+	ADC #$37			; Shift nibble into ASCII table range for A-F
+.PRINTRIGHT:
+	STA PPUDATA			; Write to PPU
+
+	; Intentionally falls through
+
+PRINT1BYTE:
+	; Prints one hex byte to the screen, assumes PPUADDR has already been set
+	; Input: <PBINPUT
+	; Clobbers: A
+	LDA <PBINPUT+1			; Right side byte
+	AND #%11110000			; Left side bits
+	STA <PBTEMP
+	LSR <PBTEMP
+	LSR <PBTEMP
+	LSR <PBTEMP
+	LSR <PBTEMP			; Shift left side bits into right side bits
+	LDA <PBTEMP
+	CMP #10				; If the nibble is higher than 9 it is a hex letter
+	BCS .ALPHALEFT
+	CLC
+	ADC #$30			; Shift nibble into ASCII table range for 0-9
+	JMP .PRINTLEFT
+.ALPHALEFT:
+	CLC
+	ADC #$37			; Shift nibble into ASCII table range for A-F
+.PRINTLEFT:
+	STA PPUDATA			; Write to PPU
+
+	LDA <PBINPUT+1			; Right side byte
+	AND #%00001111			; Right side bits
+	STA <PBTEMP
+	CMP #10				; If the nibble is higher than 9 it is a hex letter
+	BCS .ALPHARIGHT
+	CLC
+	ADC #$30			; Shift nibble into ASCII table range for 0-9
+	JMP .PRINTRIGHT
+.ALPHARIGHT:
+	CLC
+	ADC #$37			; Shift nibble into ASCII table range for A-F
+.PRINTRIGHT:
+	STA PPUDATA			; Write to PPU
+
+	JSR VBWAIT
 	RTS
 
 	.ifdef DEBUG
