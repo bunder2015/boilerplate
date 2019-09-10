@@ -342,6 +342,45 @@ HIDESAVEICON:
 	BRK			; Catch runaway execution
 	.endif
 
+NMIPPUCOPY:
+	;; Performs PPUCOPYS that were queued for NMI
+	;; Input: <NMITRANSFERS NMIPPUCADDR NMIPPUCINPUT NMIPPUCLEN
+	;; Clobbers: A Y
+	LDX <NMITRANSFERS	; Get number of transfers
+	BEQ .OUT		; Bail out if we have nothing to do
+.LOOP:
+	DEX
+	STX <NMITRANSFERS	; Pop a transfer off the list
+
+	LDA NMIPPUCADDRU, X
+	STA <PPUCADDR
+	LDA NMIPPUCADDRL, X
+	STA <PPUCADDR+1
+
+	LDA NMIPPUCINPUTU, X
+	STA <PPUCINPUT
+	LDA NMIPPUCINPUTL, X
+	STA <PPUCINPUT+1
+
+	LDA NMIPPUCLENU, X
+	STA <PPUCLEN
+	LDA NMIPPUCLENL, X
+	STA <PPUCLEN+1		; Set up transfer
+
+	TXA
+	PHA			; Save number of transfers
+	JSR PPUCOPY		; Do current transfer
+	PLA			; Restore number of transfers
+	TAX
+
+	BNE .LOOP		; Keep going if we have more transfers
+.OUT:
+	RTS
+
+	.ifdef DEBUG
+	BRK			; Catch runaway execution
+	.endif
+
 PPUCOPY:
 	;; Copies lengths of data from the CPU to the PPU
 	;; Input: <PPUCADDR <PPUCLEN <PPUCINPUT
@@ -635,6 +674,8 @@ SRAMTESTC:
 	LDA SRAMMUSIC
 	CMP #2			; SRAMMUSIC range is 0-1
 	BCS .BAD		; Carry will be set if higher than 1
+	LDA SRAMCONTINUE
+	BNE .BAD		; SRAMCONTINUE range is 0, anything else is nonzero
 	LDA #1
 	RTS
 .BAD:
@@ -934,6 +975,8 @@ NMI:
 
 	LDA <NMIREADY		; Load waiting status
 	BEQ .OUT		; if we are not waiting, bail out of NMI
+
+	JSR NMIPPUCOPY		; Do queued PPU RAM copy transfers
 
 	LDA #$00
 	STA OAMADDR

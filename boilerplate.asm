@@ -77,6 +77,8 @@ NMIEN:
 	.ds 1			; NMI enable
 NMIREADY:
 	.ds 1			; Waiting for next frame
+NMITRANSFERS:
+	.ds 1			; Number of NMIPPUCOPY transfers
 NT:
 	.ds 1			; Nametable to display
 PPUCADDR:
@@ -140,6 +142,23 @@ PBTEMP:
 	; For use with ggsound - WRAM variables
 	.include "./include/ggsound/ggsound_nesasm/ggsound_ram.inc"
 
+; For use with NMIPPUCOPY
+NMIPPUCADDRL:
+	.ds 16
+NMIPPUCADDRU:
+	.ds 16
+NMIPPUCINPUTL:
+	.ds 16
+NMIPPUCINPUTU:
+	.ds 16
+NMIPPUCLENL:
+	.ds 16
+NMIPPUCLENU:
+	.ds 16
+
+; Game related
+CONTINUELEVEL:
+	.ds 1			; Level to start on from main menu
 MUSICEN:
 	.ds 1			; Music toggle
 
@@ -150,6 +169,9 @@ MUSICEN:
 
 SRAMHEADER:
 	.ds 16			; SRAM header for verification
+
+SRAMCONTINUE:
+	.ds 1			; Highest level achieved
 SRAMMUSIC:
 	.ds 1			; Music toggle
 

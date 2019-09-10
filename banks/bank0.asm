@@ -58,34 +58,6 @@ MAINMENU:
 	STA <PPUCINPUT+1
 	JSR PPUCOPY		; Load menu BG text into PPU
 
-	LDA #$22
-	STA <PPUCADDR
-	LDA #$4D
-	STA <PPUCADDR+1
-	LDA #0
-	STA <PPUCLEN
-	LDA #8
-	STA <PPUCLEN+1
-	LDA #LOW(MENUTEXT1)
-	STA <PPUCINPUT
-	LDA #HIGH(MENUTEXT1)
-	STA <PPUCINPUT+1
-	JSR PPUCOPY		; Load menu BG new game text into PPU
-
-	LDA #$22
-	STA <PPUCADDR
-	LDA #$8D
-	STA <PPUCADDR+1
-	LDA #0
-	STA <PPUCLEN
-	LDA #7
-	STA <PPUCLEN+1
-	LDA #LOW(MENUTEXT2)
-	STA <PPUCINPUT
-	LDA #HIGH(MENUTEXT2)
-	STA <PPUCINPUT+1
-	JSR PPUCOPY		; Load menu BG option text into PPU
-
 	LDA #$23
 	STA <PPUCADDR
 	LDA #$C0
@@ -116,8 +88,10 @@ RETMAINMENU:
 	STA <SCROLLY		; Set initial scroll to top left corner
 
 	LDA <SKIPSRAMTEST
-	BNE .SKIPSRAMTEST	; Skip test if we have already run it
+	BEQ .OK
+	JMP .SKIPSRAMTEST	; Skip test if we have already run it
 
+.OK:
 	JSR SHOWSAVEICON	; Show the save icon while PRG RAM is active
 
 	LDA #MMC1_PRGRAM_EN
@@ -141,6 +115,8 @@ RETMAINMENU:
 .SRAMTESTPASS:
 	LDA SRAMMUSIC
 	STA MUSICEN		; Load music toggle from PRG RAM and store to WRAM
+	LDA SRAMCONTINUE
+	STA CONTINUELEVEL	; Load continue level from PRG RAM and store to WRAM
 
 .SRAMTESTDONE:
 	LDA #MMC1_PRGRAM_DIS
@@ -187,6 +163,52 @@ RETMAINMENU:
 	JSR play_song		; Start music
 
 .SKIPSRAMTEST:
+	LDX <NMITRANSFERS
+
+	LDA #$22
+	STA NMIPPUCADDRU, X
+	LDA #$4D
+	STA NMIPPUCADDRL, X
+
+	LDA #0
+	STA NMIPPUCLENU, X
+	LDA #8
+	STA NMIPPUCLENL, X
+
+	LDA CONTINUELEVEL
+	BNE .C1
+	LDA #LOW(MENUTEXT1)
+	STA NMIPPUCINPUTU, X
+	LDA #HIGH(MENUTEXT1)
+	STA NMIPPUCINPUTL, X
+	JMP .OUT1
+.C1:
+	LDA #LOW(MENUTEXT2)
+	STA NMIPPUCINPUTU, X
+	LDA #HIGH(MENUTEXT2)
+	STA NMIPPUCINPUTL, X
+.OUT1:
+	INX
+	STX <NMITRANSFERS	; Load menu new game / continue text into PPU during NMI
+
+	LDA #$22
+	STA NMIPPUCADDRU, X
+	LDA #$8D
+	STA NMIPPUCADDRL, X
+
+	LDA #0
+	STA NMIPPUCLENU, X
+	LDA #7
+	STA NMIPPUCLENL, X
+
+	LDA #LOW(MENUTEXT3)
+	STA NMIPPUCINPUTU, X
+	LDA #HIGH(MENUTEXT3)
+	STA NMIPPUCINPUTL, X
+
+	INX
+	STX <NMITRANSFERS	; Load menu options text into PPU during NMI
+
 	LDA #$58
 	STA SPR1X
 	LDA #$90
@@ -215,6 +237,8 @@ RETMAINMENU:
 	LDA #$A0
 	STA SPR1Y		; Move cursor down
 .MENUDOUT:
+	LDA #15
+	STA <WAITFRAMES
 	JMP .DONE
 
 .UP:
@@ -227,6 +251,8 @@ RETMAINMENU:
 	LDA #$90
 	STA SPR1Y		; Move cursor up
 .MENUUOUT:
+	LDA #15
+	STA <WAITFRAMES
 	JMP .DONE
 
 .STNEW:
@@ -238,7 +264,13 @@ RETMAINMENU:
 	BNE .STOPTS
 	JSR pause_song		; Stop music
 	JSR CLEARSCREEN		; Clear screen
+	LDA CONTINUELEVEL
+	BNE .STCONTINUE
 	JMP STARTNEWGAME	; Go to new game
+.STCONTINUE:
+	LDA CONTINUELEVEL
+	;; TODO - jump to level
+	BRK
 .STOPTS:
 	LDA SPR1Y
 	CMP #$A0		; Check if the cursor is in the bottom position
@@ -290,15 +322,29 @@ OPTIONS:
 
 	LDA #$26
 	STA <PPUCADDR
+	LDA #$26
+	STA <PPUCADDR+1
+	LDA #0
+	STA <PPUCLEN
+	LDA #16
+	STA <PPUCLEN+1
+	LDA #LOW(OPTIONSTEXT2)
+	STA <PPUCINPUT
+	LDA #HIGH(OPTIONSTEXT2)
+	STA <PPUCINPUT+1
+	JSR PPUCOPY		; Load options reset text into PPU
+
+	LDA #$26
+	STA <PPUCADDR
 	LDA #$86
 	STA <PPUCADDR+1
 	LDA #0
 	STA <PPUCLEN
 	LDA #20
 	STA <PPUCLEN+1
-	LDA #LOW(OPTIONSTEXT2)
+	LDA #LOW(OPTIONSTEXT3)
 	STA <PPUCINPUT
-	LDA #HIGH(OPTIONSTEXT2)
+	LDA #HIGH(OPTIONSTEXT3)
 	STA <PPUCINPUT+1
 	JSR PPUCOPY		; Load options return text into PPU
 
@@ -369,30 +415,49 @@ OPTIONS:
 	; 20,58 "music" cursor position
 	; 20,A0 "return" cursor position
 	LDA <JOY1IN
-	BNE .DOWN
+	BNE .DOWNMUSIC
 	JMP .DONE		; Skip loop if player 1 is not pressing buttons
-.DOWN:
+.DOWNMUSIC:
 	LDA <JOY1IN
 	AND #BUTTON_DOWN	; Check if player 1 is pressing down
-	BEQ .UP
+	BEQ .UPRESET
 	LDA SPR1Y
 	CMP #$58		; Check if the cursor is in the top position
+	BNE .DOWNRESET
+	LDA #$88
+	STA SPR1Y		; Move cursor down
+
+	JMP .OPTIONSDOUT
+.DOWNRESET:
+	LDA SPR1Y
+	CMP #$88		; Check if the cursor is in the middle position
 	BNE .OPTIONSDOUT
 	LDA #$A0
 	STA SPR1Y		; Move cursor down
 .OPTIONSDOUT:
+	LDA #15
+	STA <WAITFRAMES
 	JMP .DONE
 
-.UP:
+.UPRESET:
 	LDA <JOY1IN
 	AND #BUTTON_UP		; Check if player 1 is pressing up
 	BEQ .LMUSIC
 	LDA SPR1Y
-	CMP #$A0		; Check if the cursor is in the bottom position
-	BNE .OPTIONSUOUT
+	CMP #$88		; Check if the cursor is in the middle position
+	BNE .UPRETURN
 	LDA #$58
 	STA SPR1Y		; Move cursor up
+
+	JMP .OPTIONSUOUT
+.UPRETURN:
+	CMP #$A0		; Check if the cursor is in the bottom position
+	BNE .OPTIONSUOUT
+	LDA #$88
+	STA SPR1Y		; Move cursor up
 .OPTIONSUOUT:
+	LDA #15
+	STA <WAITFRAMES
 	JMP .DONE
 
 .LMUSIC:
@@ -407,29 +472,30 @@ OPTIONS:
 	LDA #1			; Turn music toggle on
 	STA MUSICEN
 
-	LDA #REND_DIS
-	STA <SPREN
-	STA <BGEN
-	JSR UPDATEPPUMASK	; Disable rendering
+	LDX <NMITRANSFERS
 
 	LDA #$27
-	STA <PPUCADDR
+	STA NMIPPUCADDRU, X
 	LDA #$D4
-	STA <PPUCADDR+1
+	STA NMIPPUCADDRL, X
 	LDA #0
-	STA <PPUCLEN
+	STA NMIPPUCLENU, X
 	LDA #3
-	STA <PPUCLEN+1
+	STA NMIPPUCLENL, X
 	LDA #LOW(MUSICATTRON)
-	STA <PPUCINPUT
+	STA NMIPPUCINPUTU, X
 	LDA #HIGH(MUSICATTRON)
-	STA <PPUCINPUT+1
-	JSR PPUCOPY		; Change attributes of music toggle
+	STA NMIPPUCINPUTL, X
+
+	INX
+	STX <NMITRANSFERS	; Load attributes of music toggle into PPU during NMI
 
 	LDA #song_index_New20song
 	STA <sound_param_byte_0
 	JSR play_song		; Start music
 .OPTIONSLOUT:
+	LDA #15
+	STA <WAITFRAMES
 	JMP .DONE
 
 .RMUSIC:
@@ -446,25 +512,26 @@ OPTIONS:
 
 	JSR pause_song		; Stop music
 
-	LDA #REND_DIS
-	STA <SPREN
-	STA <BGEN
-	JSR UPDATEPPUMASK	; Disable rendering
+	LDX <NMITRANSFERS
 
 	LDA #$27
-	STA <PPUCADDR
+	STA NMIPPUCADDRU, X
 	LDA #$D4
-	STA <PPUCADDR+1
+	STA NMIPPUCADDRL, X
 	LDA #0
-	STA <PPUCLEN
+	STA NMIPPUCLENU, X
 	LDA #3
-	STA <PPUCLEN+1
+	STA NMIPPUCLENL, X
 	LDA #LOW(MUSICATTROFF)
-	STA <PPUCINPUT
+	STA NMIPPUCINPUTU, X
 	LDA #HIGH(MUSICATTROFF)
-	STA <PPUCINPUT+1
-	JSR PPUCOPY		; Change attributes of music toggle
+	STA NMIPPUCINPUTL, X
+
+	INX
+	STX <NMITRANSFERS	; Load attributes of music toggle into PPU during NMI
 .OPTIONSROUT:
+	LDA #15
+	STA <WAITFRAMES
 	JMP .DONE
 
 .STRETURN:
@@ -546,9 +613,14 @@ MENUPALS:
 
 MENUTEXT:
 	.db "BOILER PLATE!"
+
 MENUTEXT1:
 	.db "New game"
+
 MENUTEXT2:
+	.db "Continue"
+
+MENUTEXT3:
 	.db "Options"
 
 MUSICATTRON:
@@ -569,9 +641,14 @@ OPTIONSATTR:
 
 OPTIONSTEXT:
 	.db "- Options -"
+
 OPTIONSTEXT1:
 	.db "Music:    On    Off"
+
 OPTIONSTEXT2:
+	.db "Clear checkpoint"
+
+OPTIONSTEXT3:
 	.db "Return to main menu"
 
         .code
